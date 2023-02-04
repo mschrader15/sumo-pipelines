@@ -16,8 +16,7 @@ def save_config(config: SaveConfig, parent_config: PipelineConfig) -> None:
     Path(config.save_path).parent.mkdir(parents=True, exist_ok=True)
     with open(config.save_path, "w") as f:
         f.write(OmegaConf.to_yaml(parent_config, resolve=True))
-    
-    
+
 
 def mv_file(config: SaveConfig, parent_config: PipelineConfig) -> None:
     """

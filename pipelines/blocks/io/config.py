@@ -14,12 +14,12 @@ class SaveConfig(DictConfig):
     save_path: str
 
 
-
 @dataclass
 class _MvFilePair(DictConfig):
     """
     This class is custom to our use case. It is used to sample parameters from a table
     """
+
     source: str = field(default="")
     target: str = field(default="")
 
@@ -29,6 +29,5 @@ class MvFileConfig(DictConfig):
     """
     This class is custom to our use case. It is used to sample parameters from a table
     """
-    mv_files: List[_MvFilePair] = field(default_factory=lambda: _MvFilePair())
 
-    
+    mv_files: List[_MvFilePair]

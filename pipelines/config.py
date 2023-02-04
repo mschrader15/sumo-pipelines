@@ -1,9 +1,9 @@
 from copy import deepcopy
-from dataclasses import dataclass, field, MISSING
+from dataclasses import dataclass, field, MISSING, make_dataclass
 from datetime import datetime
 import importlib
 from pathlib import Path
-from typing import Any, Callable, Generator, List, Tuple, Union
+from typing import Any, Callable, Generator, List, Tuple, Union, Optional
 
 from omegaconf import DictConfig, OmegaConf
 
@@ -62,11 +62,14 @@ class MetaData(DictConfig):
 class Blocks(DictConfig):
     """This just stored the blocks for the pipeline, so that they can be imported in the pipeline config file"""
 
-    SeedConfig: SeedConfig
-    ReadConfig: ReadConfig
-    CFTableConfig: CFTableConfig
-    SimulationConfig: SimulationConfig
-    SaveConfig: SaveConfig
+    # TODO: this should be createed dynamically with dataclasses.make_dataclass
+
+    SeedConfig: Optional[SeedConfig]
+    ReadConfig: Optional[ReadConfig]
+    CFTableConfig: Optional[CFTableConfig]
+    SimulationConfig: Optional[SimulationConfig]
+    SaveConfig: Optional[SaveConfig]
+    MvFileConfig: Optional[MvFileConfig]
 
 
 @dataclass
@@ -96,6 +99,10 @@ def open_config(path: Path) -> PipelineConfig:
 
     merged = OmegaConf.merge(s, c)
     merged.Metadata.output = str(Path(merged.Metadata.output).joinpath(time_))
+
+    # save the config file at the top level. Don't resolve the config file
+    to_yaml(Path(merged.Metadata.output).joinpath("config.yaml"), merged, False)
+
     return merged
 
 
@@ -123,7 +130,7 @@ def create_producer(function: str) -> Generator[PipelineConfig, None, None]:
 
 def create_consumers(
     function_n_configs: List[Tuple[str, List[str]]], parallel: bool = False
-) -> Union[Callable, ray.worker]:
+) -> Union[Callable, object]:
     """Load a consumer from a config file"""
     func = [
         (load_function(function), dotpath) for function, dotpath in function_n_configs
@@ -176,7 +183,7 @@ if __name__ == "__main__":
             for producer in pipeline.producers:
                 l = 0
                 for f in create_producer(producer.function)(producer.config, c):
-                    procs.append(consumer.remote(f))    
+                    procs.append(consumer.remote(f))
                     l += 1
                     if l > 2:
                         break
@@ -196,4 +203,3 @@ if __name__ == "__main__":
             for producer in pipeline.producers:
                 for f in create_producer(producer.function)(producer.config, c):
                     consumer(f)
-

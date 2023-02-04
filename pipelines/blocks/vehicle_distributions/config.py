@@ -15,7 +15,7 @@ class CFTableConfig(DictConfig):
 
     parameters: List[str]
     table: str
-    save_path: str 
+    save_path: str
     seed: int = field(default=42)
     cf_model: str = field(default="idm")
     cf_params: dict = field(default_factory=lambda: {})

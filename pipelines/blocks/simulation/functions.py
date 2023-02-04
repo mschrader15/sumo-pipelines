@@ -7,7 +7,6 @@ from omegaconf import DictConfig
 from .config import SimulationConfig
 
 
-
 def run_sumo(config: SimulationConfig, parent_config: DictConfig) -> None:
     """
     This is a standalone function that runs sumo and returns nothing.
@@ -38,5 +37,3 @@ def run_sumo(config: SimulationConfig, parent_config: DictConfig) -> None:
     ]
 
     subprocess.run(sumo_cmd, check=True)
-
-
