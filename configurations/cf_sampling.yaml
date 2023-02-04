@@ -1,6 +1,6 @@
 Metadata:
   # The name will also show up as the main folder for simulation
-  name: CarFollowingNormalSaltelli
+  name: CarFollowingSamples
   author: mcschrader@crimson.ua.edu
   output: ${oc.env:AIRPORT_HARPER_OUTPUT}/${Metadata.name}
   run_id: ???
@@ -9,100 +9,136 @@ Metadata:
   random_seed: 42
 
 Blocks:
+  
   SeedConfig:
-    num_samples: 10
-    range: [0, 1000]
-    seed: ???
-
-  SaveConfig:
-    save_path: ${Metadata.cwd}/config.yaml
-
-  MvFileConfig:
-    mv_files:
-      - source: ${Metadata.simulation_root}/sumo-xml/detectors/${Metadata.run_id}_detectors.out.xml
-        target: ${Metadata.cwd}/${Metadata.run_id}_detectors.out.xml
+    num_samples: 30
+    range:
+      - 0
+      - 1000
+    seed: 42
 
   ReadConfig:
+    regex: "*/config.yaml"
     root_dir: ${Metadata.output}
-    regex: "**/config.yaml"
-
-  # CFTableConfig:
-  #   seed: ${Blocks.SeedConfig.seed}
-  #   save_path: ${Metadata.cwd}/vehDescript.xml
-  #   num_samples: 10
-  #   vehicle_distribution_name: "vehDist"
-  #   cf_model: IDM
-  #   sample_mode: row-wise
-  #   table: dummy
-  #   cf_params:
-  #     acceleration: a
-  #     deceleration: b
-  #     freeFlowSpeed: speedFactor
-
+  
+  CFTableConfig:
+    table: ${Metadata.simulation_root}/data-analysis/sumo_uc_2023/parameters.csv
+    save_path: ${Metadata.cwd}/vehDescript.xml
+    seed: ${Blocks.SeedConfig.seed}
+    cf_model: IDM
+    cf_params:
+      acceleration: a
+      deceleration: b
+      freeflow_speed: speedFactor
+    vehicle_distribution_name: vehDist
+    sample_mode: row-wise
+    num_samples: 100
+  
   SimulationConfig:
+    start_time: 0
+    end_time: 24000
     net_file: ${Metadata.simulation_root}/sumo-xml/simplified_reworked.net.xml
+    gui: false
     route_files:
       - /Users/max/Development/tmp/Iterative_Baseline/200_600_Passing/route.0.xml
       - /Users/max/Development/tmp/Iterative_Baseline/200_600_Passing/route.1.xml
       - /Users/max/Development/tmp/Iterative_Baseline/200_600_Passing/route.2.xml
       - /Users/max/Development/tmp/Iterative_Baseline/200_600_Passing/route.3.xml
+    
     additional_files:
       - ${Metadata.simulation_root}/sumo-xml/detectors/radar_boxes.xml
       - ${Metadata.simulation_root}/sumo-xml/detectors/e2.detectors.add.xml
       - ${Metadata.simulation_root}/sumo-xml/traffic-lights/NEMA/coordinated/63082002.NEMA.Coordinated.xml
       - ${Metadata.simulation_root}/sumo-xml/traffic-lights/NEMA/coordinated/63082003.NEMA.Coordinated.xml
       - ${Metadata.simulation_root}/sumo-xml/traffic-lights/NEMA/coordinated/63082004.NEMA.Coordinated.xml
-      # - ${Blocks.CFTableConfig.save_path}
-      - ${Metadata.simulation_root}/sumo-xml/veh-descript/baseVehDescript.in.xml
+      - ${Blocks.CFTableConfig.save_path}
+    
+    step_length: 0.1
+    seed: 42
     additional_sim_params:
       - --output-prefix
       - ${Metadata.run_id}_
       - --fcd-output
       - ${Metadata.cwd}/fcd.xml
       - --fcd-output.filter-shapes
-      - "Radar137_East_thru"
+      - Radar137_East_thru
       - --seed
       - ${Blocks.SeedConfig.seed}
-    start_time: 0
-    end_time: 24000
-    step_length: 0.1
+    simulation_output: ${Metadata.cwd}/sumo_output.txt
+  
+  SaveConfig:
+    save_path: ${Metadata.cwd}/config.yaml
+  
+  MvFileConfig:
+    mv_files:
+      - source: ${Metadata.simulation_root}/sumo-xml/detectors/${Metadata.run_id}_detectors.out.xml
+        target: ${Metadata.cwd}/${Metadata.run_id}_detectors.out.xml
 
+  XMLConvertConfig:
+    source: ${Metadata.cwd}/${Metadata.run_id}_fcd.xml
+    target: ${Metadata.cwd}/fcd.parquet
+    format: parquet
+    delete_source: true
+    elements: 
+      - name: timestep
+        attributes:
+        - time
+      - name: vehicle
+        attributes:
+        - id
+        - x 
+        - "y" 
+        - z 
+        - angle 
+        - type 
+        - speed
+  
 Pipeline:
-  executor: ray
-  parallel_proc: auto
   pipeline:
-    # the order of the blocks is important.
-    # the first block will be executed first, the second block will be executed second, etc.
-    # each block can be executed in parallel or sequentially, but will
-    - block: "Generate Samples"
-      parallel: false
-      number_of_workers: 1
+    
+    - block: Generate Samples
       producers:
-        # these become nested loops
         - function: producers.generate_random_seed
           config: ${Blocks.SeedConfig}
-
       consumers:
-      #   # create the vehicle distribution
-      #   - function: vehicle_distributions.create_distribution_pandas
-      #     config: ${Blocks.CFTableConfig}
-      #     execution_mode: sequential
-
-        # save the distribution and the parameters
+        - function: vehicle_distributions.create_distribution_pandas
+          config: ${Blocks.CFTableConfig}
         - function: io.save_config
           config: ${Blocks.SaveConfig}
+      parallel: false
+      number_of_workers: 1
 
-    - block: "Run Simulation"
-      parallel: True
-      number_of_workers: auto
+    - block: Run Simulation
       producers:
-        # generator to map the simulation over
         - function: producers.read_configs
           config: ${Blocks.ReadConfig}
       consumers:
-        # run the simulation, can be parallelized
         - function: simulation.run_sumo
           config: ${Blocks.SimulationConfig}
         - function: io.mv_file
           config: ${Blocks.MvFileConfig}
-          
+        - function: xml.convert_xml_to_parquet
+          config: ${Blocks.XMLConvertConfig}
+        - function: xml.convert_xml_to_parquet_pandas
+          config:
+            source: ${Metadata.cwd}/${Metadata.run_id}_detectors.out.xml
+            target: ${Metadata.cwd}/${Metadata.run_id}_detectors.parquet
+            format: parquet
+            delete_source: true
+            elements:
+              - 
+      parallel: true
+      number_of_workers: auto
+    
+    # - block: Post Processing
+    #   producers:
+    #     - function: producers.read_configs
+    #       config: ${Blocks.ReadConfig}
+    #   consumers:
+    #     - function: xml.convert_xml_to_parquet
+    #       config: ${Blocks.SimulationConfig}
+    #   parallel: true
+    #   number_of_workers: auto
+
+  executor: ray
+  parallel_proc: auto

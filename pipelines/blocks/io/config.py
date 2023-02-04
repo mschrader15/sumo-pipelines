@@ -6,18 +6,18 @@ from omegaconf import DictConfig, ListConfig
 
 
 @dataclass
-class SaveConfig(DictConfig):
+class SaveConfig:
     """
-    This class is custom to our use case. It is used to sample parameters from a table
+    This class is used to save the configuration of the simulation
     """
 
     save_path: str
 
 
 @dataclass
-class _MvFilePair(DictConfig):
+class _MvFilePair:
     """
-    This class is custom to our use case. It is used to sample parameters from a table
+    This is a helper class for MvFileConfig
     """
 
     source: str = field(default="")
@@ -25,9 +25,9 @@ class _MvFilePair(DictConfig):
 
 
 @dataclass
-class MvFileConfig(DictConfig):
+class MvFileConfig:
     """
-    This class is custom to our use case. It is used to sample parameters from a table
+    This class is used to copy files from one location to another
     """
 
     mv_files: List[_MvFilePair]

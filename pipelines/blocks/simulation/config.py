@@ -6,7 +6,7 @@ from omegaconf import DictConfig
 
 
 @dataclass
-class SimulationConfig(DictConfig):
+class SimulationConfig:
     start_time: int
     end_time: int
     net_file: str
@@ -16,3 +16,4 @@ class SimulationConfig(DictConfig):
     step_length: float = field(default=0.1)
     seed: int = field(default=42)
     additional_sim_params: List[str] = field(default_factory=list)
+    simulation_output: str = ''

@@ -2,3 +2,4 @@ ray
 pandas
 sumolib
 omegaconf
+pyarrow

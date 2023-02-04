@@ -6,7 +6,7 @@ from omegaconf import DictConfig
 
 
 @dataclass
-class ReadConfig(DictConfig):
+class ReadConfig:
     """
     This class is custom to our use case. It is used to sample parameters from a table
     """
@@ -16,7 +16,7 @@ class ReadConfig(DictConfig):
 
 
 @dataclass
-class SeedConfig(DictConfig):
+class SeedConfig:
     """
     This class is custom to our use case. It is used to sample parameters from a table
     """

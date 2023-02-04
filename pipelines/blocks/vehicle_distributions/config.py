@@ -1,14 +1,10 @@
 from typing import List
-from pathlib import Path
 from dataclasses import dataclass, field
 
-import pandas as pd
-import numpy as np
-from omegaconf import DictConfig
 
 
 @dataclass
-class CFTableConfig(DictConfig):
+class CFTableConfig:
     """
     This class is custom to our use case. It is used to sample parameters from a table
     """

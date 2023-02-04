@@ -36,4 +36,14 @@ def run_sumo(config: SimulationConfig, parent_config: DictConfig) -> None:
         *config.additional_sim_params,
     ]
 
-    subprocess.run(sumo_cmd, check=True)
+    # make sure that everything is a string
+    sumo_cmd = [str(x) for x in sumo_cmd]
+
+    if config.simulation_output:
+        with open(config.simulation_output, "w") as f:
+            s = subprocess.run(sumo_cmd, check=True, stdout=f, stderr=f)
+    else:
+        s = subprocess.run(sumo_cmd, )
+    
+    if s.returncode != 0:
+        raise RuntimeError("Sumo failed to run")

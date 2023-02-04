@@ -2,12 +2,13 @@ from copy import deepcopy
 from dataclasses import dataclass, field, MISSING, make_dataclass
 from datetime import datetime
 import importlib
+import inspect
 from pathlib import Path
 from typing import Any, Callable, Generator, List, Tuple, Union, Optional
 
 from omegaconf import DictConfig, OmegaConf
 
-from blocks import *
+from pipelines.blocks import *
 
 
 try:
@@ -19,14 +20,14 @@ except ImportError:
 
 
 @dataclass
-class PipePiece(DictConfig):
+class PipePiece:
     function: str
     type: str
     config: dict
 
 
 @dataclass
-class PipeBlock(DictConfig):
+class PipeBlock:
     block: str
     producers: List[PipePiece]
     consumers: List[PipePiece]
@@ -35,14 +36,14 @@ class PipeBlock(DictConfig):
 
 
 @dataclass
-class Pipeline(DictConfig):
+class Pipeline:
     pipeline: List[PipeBlock] = field(default=MISSING)
     executor: str = field(default="ray")
     parallel_proc: Union[str, int] = field(default="auto")
 
 
 @dataclass
-class MetaData(DictConfig):
+class MetaData:
     name: str
     author: str
     output: str
@@ -58,19 +59,43 @@ class MetaData(DictConfig):
         return self.__str__()
 
 
-@dataclass
-class Blocks(DictConfig):
-    """This just stored the blocks for the pipeline, so that they can be imported in the pipeline config file"""
+# @dataclass
+# class Blocks:
+#     """This just stored the blocks for the pipeline, so that they can be imported in the pipeline config file"""
 
-    # TODO: this should be createed dynamically with dataclasses.make_dataclass
+#     # TODO: this should be createed dynamically with dataclasses.make_dataclass
 
-    SeedConfig: Optional[SeedConfig]
-    ReadConfig: Optional[ReadConfig]
-    CFTableConfig: Optional[CFTableConfig]
-    SimulationConfig: Optional[SimulationConfig]
-    SaveConfig: Optional[SaveConfig]
-    MvFileConfig: Optional[MvFileConfig]
+#     SeedConfig: Optional[SeedConfig]
+#     ReadConfig: Optional[ReadConfig]
+#     CFTableConfig: Optional[CFTableConfig]
+#     SimulationConfig: Optional[SimulationConfig]
+#     SaveConfig: Optional[SaveConfig]
+#     MvFileConfig: Optional[MvFileConfig]
 
+
+def get_blocks():
+    
+    blocks = {}
+    for block_dir in (Path(__file__).parent / "blocks").iterdir():
+        if block_dir.is_dir() and not block_dir.name.startswith("_"):
+            search_path = f"pipelines.blocks.{block_dir.name}.config"
+            for _, c in inspect.getmembers(importlib.import_module(search_path), inspect.isclass):
+                # if hasattr(config, "__name__"):
+                # asserts that the class is in the same module as the predicate
+                if c.__module__ == search_path:
+                    blocks[c.__name__] = c
+    return blocks
+
+
+
+
+Blocks = make_dataclass(
+    "Blocks",
+    [
+        (config.__name__, Optional[config])
+        for config in get_blocks().values()
+    ],
+)
 
 @dataclass
 class PipelineConfig:
@@ -98,108 +123,13 @@ def open_config(path: Path) -> PipelineConfig:
     )
 
     merged = OmegaConf.merge(s, c)
-    merged.Metadata.output = str(Path(merged.Metadata.output).joinpath(time_))
 
+    # handle the output directory
+    merged.Metadata.output = str(Path(merged.Metadata.output).joinpath(time_))
+    # create the output directory
+    Path(merged.Metadata.output).mkdir(parents=True, exist_ok=True)
     # save the config file at the top level. Don't resolve the config file
     to_yaml(Path(merged.Metadata.output).joinpath("config.yaml"), merged, False)
 
     return merged
 
-
-def load_function(function: str) -> Callable:
-    """Load a function from a string"""
-    return importlib.import_module(
-        f"blocks.{function.split('.')[0]}.functions"
-    ).__dict__[function.split(".")[-1]]
-
-
-def create_producer(function: str) -> Generator[PipelineConfig, None, None]:
-    """Load a generator from a config file"""
-    func = load_function(function)
-
-    def producer(config, main_config):
-        i = 0
-        for f in func(config, main_config):
-            if f.Metadata.get("run_id", None) is None:
-                f.Metadata.run_id = f"{i}"
-                i += 1
-            yield f
-
-    return producer
-
-
-def create_consumers(
-    function_n_configs: List[Tuple[str, List[str]]], parallel: bool = False
-) -> Union[Callable, object]:
-    """Load a consumer from a config file"""
-    func = [
-        (load_function(function), dotpath) for function, dotpath in function_n_configs
-    ]
-
-    def consumer(main_config):
-        for f, dotpath in func:
-            f(recursive_get(main_config, dotpath), main_config)
-
-    return ray.remote(consumer) if parallel else consumer
-
-
-def recursive_get(d: DictConfig, keys: List[str]) -> Any:
-    """Get a value from a nested dict"""
-    return d[keys[0]] if len(keys) == 1 else recursive_get(d[keys[0]], keys[1:])
-
-
-if __name__ == "__main__":
-    c = open_config(
-        "/Users/max/Development/sumo-pipelines/configurations/cf_sampling.yaml"
-    )
-
-    # c.Pipeline.build_pipeline()
-
-    # create the consumer functions
-    for k, pipeline in enumerate(c.Pipeline.pipeline):
-        assert (
-            len(pipeline.producers) == 1
-        ), "Only one producer per block is allowed (until I figure out how to chain them)"
-
-        if pipeline.parallel:
-            # initialize ray
-            if not ray_exists:
-                raise ImportError(
-                    "Ray is not installed, but is required for parallel processing"
-                )
-            ray.init()
-
-            consumer = create_consumers(
-                [
-                    (
-                        consumer.function,
-                        ["Pipeline", "pipeline", k, "consumers", i, "config"],
-                    )
-                    for i, consumer in enumerate(pipeline.consumers)
-                ],
-                parallel=True,
-            )
-            procs = []
-            for producer in pipeline.producers:
-                l = 0
-                for f in create_producer(producer.function)(producer.config, c):
-                    procs.append(consumer.remote(f))
-                    l += 1
-                    if l > 2:
-                        break
-            ray.get(procs)
-
-        else:
-            consumer = create_consumers(
-                [
-                    (
-                        consumer.function,
-                        ["Pipeline", "pipeline", k, "consumers", i, "config"],
-                    )
-                    for i, consumer in enumerate(pipeline.consumers)
-                ],
-                parallel=False,
-            )
-            for producer in pipeline.producers:
-                for f in create_producer(producer.function)(producer.config, c):
-                    consumer(f)

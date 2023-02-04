@@ -1,2 +1,2 @@
-# from .config import *
-# from .functions import *
+from .config import ReadConfig, SeedConfig
+from .functions import *

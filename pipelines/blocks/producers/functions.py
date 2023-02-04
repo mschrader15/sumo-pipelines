@@ -13,7 +13,7 @@ import random
 from typing import Generator
 from omegaconf import OmegaConf, DictConfig
 
-from config import PipelineConfig
+# from config import PipelineConfig
 from .config import ReadConfig, SeedConfig
 
 
