@@ -1,0 +1,108 @@
+Metadata:
+  # The name will also show up as the main folder for simulation
+  name: CarFollowingNormalSaltelli
+  author: mcschrader@crimson.ua.edu
+  output: ${oc.env:AIRPORT_HARPER_OUTPUT}/${Metadata.name}
+  run_id: ???
+  cwd: ${.output}/${.run_id}
+  simulation_root: ${oc.env:AIRPORT_HARPER_SUMO}
+  random_seed: 42
+
+Blocks:
+  SeedConfig:
+    num_samples: 10
+    range: [0, 1000]
+    seed: ???
+
+  SaveConfig:
+    save_path: ${Metadata.cwd}/config.yaml
+
+  MvFileConfig:
+    mv_files:
+      - source: ${Metadata.simulation_root}/sumo-xml/detectors/${Metadata.run_id}_detectors.out.xml
+        target: ${Metadata.cwd}/${Metadata.run_id}_detectors.out.xml
+
+  ReadConfig:
+    root_dir: ${Metadata.output}
+    regex: "**/config.yaml"
+
+  # CFTableConfig:
+  #   seed: ${Blocks.SeedConfig.seed}
+  #   save_path: ${Metadata.cwd}/vehDescript.xml
+  #   num_samples: 10
+  #   vehicle_distribution_name: "vehDist"
+  #   cf_model: IDM
+  #   sample_mode: row-wise
+  #   table: dummy
+  #   cf_params:
+  #     acceleration: a
+  #     deceleration: b
+  #     freeFlowSpeed: speedFactor
+
+  SimulationConfig:
+    net_file: ${Metadata.simulation_root}/sumo-xml/simplified_reworked.net.xml
+    route_files:
+      - /Users/max/Development/tmp/Iterative_Baseline/200_600_Passing/route.0.xml
+      - /Users/max/Development/tmp/Iterative_Baseline/200_600_Passing/route.1.xml
+      - /Users/max/Development/tmp/Iterative_Baseline/200_600_Passing/route.2.xml
+      - /Users/max/Development/tmp/Iterative_Baseline/200_600_Passing/route.3.xml
+    additional_files:
+      - ${Metadata.simulation_root}/sumo-xml/detectors/radar_boxes.xml
+      - ${Metadata.simulation_root}/sumo-xml/detectors/e2.detectors.add.xml
+      - ${Metadata.simulation_root}/sumo-xml/traffic-lights/NEMA/coordinated/63082002.NEMA.Coordinated.xml
+      - ${Metadata.simulation_root}/sumo-xml/traffic-lights/NEMA/coordinated/63082003.NEMA.Coordinated.xml
+      - ${Metadata.simulation_root}/sumo-xml/traffic-lights/NEMA/coordinated/63082004.NEMA.Coordinated.xml
+      # - ${Blocks.CFTableConfig.save_path}
+      - ${Metadata.simulation_root}/sumo-xml/veh-descript/baseVehDescript.in.xml
+    additional_sim_params:
+      - --output-prefix
+      - ${Metadata.run_id}_
+      - --fcd-output
+      - ${Metadata.cwd}/fcd.xml
+      - --fcd-output.filter-shapes
+      - "Radar137_East_thru"
+      - --seed
+      - ${Blocks.SeedConfig.seed}
+    start_time: 0
+    end_time: 24000
+    step_length: 0.1
+
+Pipeline:
+  executor: ray
+  parallel_proc: auto
+  pipeline:
+    # the order of the blocks is important.
+    # the first block will be executed first, the second block will be executed second, etc.
+    # each block can be executed in parallel or sequentially, but will
+    - block: "Generate Samples"
+      parallel: false
+      number_of_workers: 1
+      producers:
+        # these become nested loops
+        - function: producers.generate_random_seed
+          config: ${Blocks.SeedConfig}
+
+      consumers:
+      #   # create the vehicle distribution
+      #   - function: vehicle_distributions.create_distribution_pandas
+      #     config: ${Blocks.CFTableConfig}
+      #     execution_mode: sequential
+
+        # save the distribution and the parameters
+        - function: io.save_config
+          config: ${Blocks.SaveConfig}
+
+    - block: "Run Simulation"
+      parallel: True
+      number_of_workers: auto
+      producers:
+        # generator to map the simulation over
+        - function: producers.read_configs
+          config: ${Blocks.ReadConfig}
+      consumers:
+        # run the simulation, can be parallelized
+        - function: simulation.run_sumo
+          config: ${Blocks.SimulationConfig}
+        - function: io.mv_file
+          config: ${Blocks.MvFileConfig}
+          
