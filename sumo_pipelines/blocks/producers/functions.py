@@ -14,7 +14,7 @@ from typing import Generator
 from omegaconf import OmegaConf, DictConfig
 
 # from config import PipelineConfig
-from .config import ReadConfig, SeedConfig
+from .config import ReadConfig, SeedConfig, IteratorConfig
 
 
 def read_configs(
@@ -50,4 +50,16 @@ def generate_random_seed(
         randint = random.randint(*config.range)
         new_conf = deepcopy(parent_config)
         new_conf.Blocks.SeedConfig.seed = randint
+        yield new_conf
+
+
+
+def generate_iterator(
+    config: IteratorConfig, parent_config: DictConfig
+) -> Generator[DictConfig, None, None]:
+    # this function returns the a sequence of random seeds, to be consumed by the caller.
+    # this is a simple example, but it could be used to generate a sequence of random seeds
+    for choice in config.choices:
+        new_conf = deepcopy(parent_config)
+        new_conf.Blocks.IteratorConfig.val = choice
         yield new_conf

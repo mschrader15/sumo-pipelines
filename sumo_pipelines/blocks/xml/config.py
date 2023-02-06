@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List
+from typing import Dict, List
 
 
 @dataclass
@@ -10,7 +10,7 @@ class XMLConvertConfig:
 
     source: str
     target: str
-    elements: List[dict]
+    elements: List[Dict]
     format: str = "parquet"
     delete_source: bool = False
 

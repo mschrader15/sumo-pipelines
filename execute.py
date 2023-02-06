@@ -2,10 +2,10 @@ import importlib
 from pathlib import Path
 from typing import Any, Callable, Generator, List, Tuple, Union
 
-from omegaconf import DictConfig
+from omegaconf import OmegaConf
 import click
 
-from pipelines.config import PipelineConfig, open_config
+from sumo_pipelines.config import PipelineConfig, open_config
 
 
 try:
@@ -19,25 +19,29 @@ except ImportError:
 def load_function(function: str) -> Callable:
     """Load a function from a string"""
     return importlib.import_module(
-        f"pipelines.blocks.{function.split('.')[0]}.functions"
+        f"sumo_pipelines.blocks.{function.split('.')[0]}.functions"
     ).__dict__[function.split(".")[-1]]
 
 
-def create_producer(function: str) -> Generator[PipelineConfig, None, None]:
-    """Load a generator from a config file"""
-    func = load_function(function)
+def recursive_producer(producers: List[Tuple[str, List[str]]]) -> None:
+    producers = [(load_function(function), dotpath) for function, dotpath in producers]
+    i = 0
 
-    def producer(config, main_config):
-        i = 0
-        for f in func(config, main_config):
-            if f.Metadata.get("run_id", None) is None:
-                f.Metadata.run_id = f"{i}"
-                # make the output directory
-                Path(f.Metadata.cwd).mkdir(parents=True, exist_ok=True)
-                i += 1
-            yield f
+    def _recursive_producer(main_config, producers: List[Tuple[Callable, List[str]]] = producers):
+        nonlocal i
+        for f in producers[0][0](OmegaConf.select(main_config, producers[0][1]), main_config):
+            if len(producers) > 1:
+                yield from _recursive_producer(f, producers[1:])
+            else:
+                if f.Metadata.get("run_id", None) is None:
+                    f.Metadata.run_id = f"{i}"
+                    # make the output directory
+                    Path(f.Metadata.cwd).mkdir(parents=True, exist_ok=True)
+                    i += 1
+                yield f
+        
+    return _recursive_producer
 
-    return producer
 
 
 def create_consumers(
@@ -50,14 +54,10 @@ def create_consumers(
 
     def consumer(main_config):
         for f, dotpath in func:
-            f(recursive_get(main_config, dotpath), main_config)
+            f(OmegaConf.select(main_config, dotpath), main_config)
 
     return ray.remote(consumer) if parallel else consumer
 
-
-def recursive_get(d: DictConfig, keys: List[str]) -> Any:
-    """Get a value from a nested dict"""
-    return d[keys[0]] if len(keys) == 1 else recursive_get(d[keys[0]], keys[1:])
 
 
 @click.command()
@@ -74,10 +74,6 @@ def main(config: Path, debug: bool) -> None:
 
     # create the consumer functions
     for k, pipeline in enumerate(c.Pipeline.pipeline):
-        assert (
-            len(pipeline.producers) == 1
-        ), "Only one producer per block is allowed (until I figure out how to chain them)"
-
         if pipeline.parallel:
             # initialize ray
             if not ray_exists:
@@ -93,18 +89,24 @@ def main(config: Path, debug: bool) -> None:
                 [
                     (
                         consumer.function,
-                        ["Pipeline", "pipeline", k, "consumers", i, "config"],
+                        f"Pipeline.pipeline[{k}].consumers[{i}].config",
                     )
                     for i, consumer in enumerate(pipeline.consumers)
                 ],
                 parallel=True,
             )
             procs = []
-            for producer in pipeline.producers:
-                procs.extend(
-                    consumer.remote(f)
-                    for f in create_producer(producer.function)(producer.config, c)
-                )
+            for f in recursive_producer(
+                [
+                    (
+                        consumer.function,
+                        f"Pipeline.pipeline[{k}].producers[{i}].config",
+                    )
+                    for i, consumer in enumerate(pipeline.producers)
+                ],
+            )(c):
+                procs.append(consumer.remote(f))
+
             ray.get(procs)
 
         else:
@@ -112,15 +114,22 @@ def main(config: Path, debug: bool) -> None:
                 [
                     (
                         consumer.function,
-                        ["Pipeline", "pipeline", k, "consumers", i, "config"],
+                        f"Pipeline.pipeline[{k}].consumers[{i}].config",
                     )
                     for i, consumer in enumerate(pipeline.consumers)
                 ],
                 parallel=False,
             )
-            for producer in pipeline.producers:
-                for f in create_producer(producer.function)(producer.config, c):
-                    consumer(f)
+            for f in recursive_producer(
+                [
+                    (
+                        consumer.function,
+                        f"Pipeline.pipeline[{k}].producers[{i}].config",
+                    )
+                    for i, consumer in enumerate(pipeline.producers)
+                ],
+            )(c):
+                consumer(f)
 
 
 if __name__ == "__main__":

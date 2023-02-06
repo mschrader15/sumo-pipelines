@@ -31,9 +31,7 @@ def create_distribution_pandas(
         DUMB_OBJECT_STORE[cf_config.table] = samples
 
     samples = samples.rename(columns=cf_config.cf_params)
-    # add the cf model
-    samples["carFollowModel"] = cf_config.cf_model
-    
+
     # add the vehicle type
     vehicles = []
     i = 0
@@ -42,7 +40,9 @@ def create_distribution_pandas(
         nonlocal i
         vehicles.append(
             f'\t<vType id="{cf_config.vehicle_distribution_name}_{i}" '
-            + " ".join(['{}="{}"'.format(k, v) for k, v in row.items()])
+            # + " ".join(['{}="{}"'.format(k, str(v)) for k, v in row.items()])
+            # + " "
+            + " ".join(['{}="{}"'.format(k, str(v)) for k, v in cf_config.additional_params.items()])
             + "/>"
         )
         i += 1

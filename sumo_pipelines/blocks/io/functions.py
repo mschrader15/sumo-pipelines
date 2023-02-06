@@ -12,7 +12,7 @@ def save_config(config: SaveConfig, parent_config: OmegaConf) -> None:
     Args:
         config (SaveConfig): The config file to save.
     """
-    from pipelines.config import MetaData
+    from sumo_pipelines.config import MetaData
 
     Path(config.save_path).parent.mkdir(parents=True, exist_ok=True)
     with open(config.save_path, "w") as f:

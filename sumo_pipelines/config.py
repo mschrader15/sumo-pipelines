@@ -4,11 +4,11 @@ from datetime import datetime
 import importlib
 import inspect
 from pathlib import Path
-from typing import Any, Callable, Generator, List, Tuple, Union, Optional
+from typing import Any, Callable, Dict, Generator, List, Tuple, Union, Optional
 
 from omegaconf import DictConfig, OmegaConf
 
-from pipelines.blocks import *
+from sumo_pipelines.blocks import *
 
 
 try:
@@ -23,7 +23,7 @@ except ImportError:
 class PipePiece:
     function: str
     type: str
-    config: dict
+    config: Dict
 
 
 @dataclass
@@ -78,7 +78,7 @@ def get_blocks():
     blocks = {}
     for block_dir in (Path(__file__).parent / "blocks").iterdir():
         if block_dir.is_dir() and not block_dir.name.startswith("_"):
-            search_path = f"pipelines.blocks.{block_dir.name}.config"
+            search_path = f"sumo_pipelines.blocks.{block_dir.name}.config"
             for _, c in inspect.getmembers(importlib.import_module(search_path), inspect.isclass):
                 # if hasattr(config, "__name__"):
                 # asserts that the class is in the same module as the predicate
@@ -131,5 +131,19 @@ def open_config(path: Path) -> PipelineConfig:
     # save the config file at the top level. Don't resolve the config file
     to_yaml(Path(merged.Metadata.output).joinpath("config.yaml"), merged, False)
 
+    print("Config file saved at: ", merged.Metadata.output)
+
     return merged
 
+def open_completed_config(path: Path, validate: bool = True) -> PipelineConfig:
+    """Open a config file and return a DictConfig object"""
+
+    with open(path, "r") as f:
+        c = OmegaConf.load(
+            f,
+        )
+    if not validate:
+        return c
+        
+    s = OmegaConf.structured(PipelineConfig)
+    return OmegaConf.merge(s, c)

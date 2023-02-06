@@ -1,6 +1,6 @@
 Metadata:
   # The name will also show up as the main folder for simulation
-  name: CarFollowingSamples
+  name: CarFollowingDefaults
   author: mcschrader@crimson.ua.edu
   output: ${oc.env:AIRPORT_HARPER_OUTPUT}/${Metadata.name}
   run_id: ???
@@ -18,9 +18,8 @@ Blocks:
       - Krauss
       - EIDM
 
-
   SeedConfig:
-    num_samples: 10
+    num_samples: 1
     range:
       - 0
       - 1000
@@ -39,7 +38,7 @@ Blocks:
     cf_params:
       accel: accel
       decel: decel
-      # freeflow_speed: speedFactor
+    # freeflow_speed: speedFactor
     vehicle_distribution_name: vehDist
     sample_mode: row-wise
     num_samples: 500

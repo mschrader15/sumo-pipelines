@@ -1,8 +1,8 @@
 from pathlib import Path
-from dataclasses import dataclass
-from typing import Any
+from dataclasses import MISSING, dataclass, field
+from typing import Any, List
 
-from omegaconf import DictConfig
+from omegaconf import DictConfig, ListConfig
 
 
 @dataclass
@@ -20,8 +20,16 @@ class SeedConfig:
     """
     This class is custom to our use case. It is used to sample parameters from a table
     """
-
     num_samples: int
-    range: tuple
-    copy_func: Any
     seed: int = 42
+    range: List = field(default_factory=list)
+
+
+
+@dataclass
+class IteratorConfig:
+    name: str
+    val: Any = MISSING
+    choices: List = field(default_factory=list)
+
+
