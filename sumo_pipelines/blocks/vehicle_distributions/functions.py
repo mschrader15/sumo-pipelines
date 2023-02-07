@@ -1,6 +1,6 @@
 from omegaconf import DictConfig
 
-from .config import CFTableConfig
+from .config import CFTableConfig, CFSimpleConfig
 
 try:
     import pandas as pd
@@ -54,3 +54,24 @@ def create_distribution_pandas(
         for v in vehicles:
             f.write(v + "\n")
         f.write("</vTypeDistribution>")
+
+
+def create_simple_distribution(
+    cf_config: CFSimpleConfig,
+    config: DictConfig,
+) -> None:
+    
+    i = 0
+    vehicles = [
+        f'\t<vType id="{cf_config.vehicle_distribution_name}_{i}" '
+        + " ".join(
+            [f'{k}="{str(v)}"' for k, v in cf_config.cf_params.items()]
+        )
+        + "/>"
+    ]
+    with open(cf_config.save_path, "w") as f:
+        f.write(f'<vTypeDistribution id="{cf_config.vehicle_distribution_name}" >\n')
+        for v in vehicles:
+            f.write(v + "\n")
+        f.write("</vTypeDistribution>")
+

@@ -19,3 +19,14 @@ class CFTableConfig:
 
     # legacy
     parameters: List = field(default_factory=list)
+
+
+@dataclass
+class CFSimpleConfig:
+    """
+    This class is custom to our use case. It is used to sample parameters from a table
+    """
+    save_path: str
+    vehicle_distribution_name: str
+    cf_params: Dict = field(default_factory=lambda: {})
+    

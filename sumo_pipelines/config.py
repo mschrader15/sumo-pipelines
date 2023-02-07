@@ -22,7 +22,6 @@ except ImportError:
 @dataclass
 class PipePiece:
     function: str
-    type: str
     config: Dict
 
 
@@ -59,20 +58,6 @@ class MetaData:
         return self.__str__()
 
 
-# @dataclass
-# class Blocks:
-#     """This just stored the blocks for the pipeline, so that they can be imported in the pipeline config file"""
-
-#     # TODO: this should be createed dynamically with dataclasses.make_dataclass
-
-#     SeedConfig: Optional[SeedConfig]
-#     ReadConfig: Optional[ReadConfig]
-#     CFTableConfig: Optional[CFTableConfig]
-#     SimulationConfig: Optional[SimulationConfig]
-#     SaveConfig: Optional[SaveConfig]
-#     MvFileConfig: Optional[MvFileConfig]
-
-
 def get_blocks():
     
     blocks = {}
@@ -85,8 +70,6 @@ def get_blocks():
                 if c.__module__ == search_path:
                     blocks[c.__name__] = c
     return blocks
-
-
 
 
 Blocks = make_dataclass(

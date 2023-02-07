@@ -22,6 +22,7 @@ def convert_xml_to_parquet(config: XMLConvertConfig, parent_config: DictConfig) 
         config.elements[0]["attributes"],
         config.elements[1]["name"],
         config.elements[1]["attributes"],
+        optional=True,  
     ):
         for attr in config.elements[0].attributes:
             elements[attr].append(getattr(row[0], attr))
