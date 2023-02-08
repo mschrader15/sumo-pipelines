@@ -1,148 +1,148 @@
-Metadata:
-  # The name will also show up as the main folder for simulation
-  name: CarFollowingSamples
-  author: mcschrader@crimson.ua.edu
-  output: ${oc.env:AIRPORT_HARPER_OUTPUT}/${Metadata.name}
-  run_id: ???
-  cwd: ${.output}/${.run_id}
-  simulation_root: ${oc.env:AIRPORT_HARPER_SUMO}
-  random_seed: 42
+# Metadata:
+#   # The name will also show up as the main folder for simulation
+#   name: CarFollowingSamples
+#   author: mcschrader@crimson.ua.edu
+#   output: ${oc.env:AIRPORT_HARPER_OUTPUT}/${Metadata.name}
+#   run_id: ???
+#   cwd: ${.output}/${.run_id}
+#   simulation_root: ${oc.env:AIRPORT_HARPER_SUMO}
+#   random_seed: 42
 
-Blocks:
-  # this method doesn't allow for multiple blocks of the same type
-  IteratorConfig:
-    val: ???
-    name: carFollowingModel
-    choices:
-      - IDM
-      - Krauss
-      - EIDM
+# Blocks:
+#   # this method doesn't allow for multiple blocks of the same type
+#   IteratorConfig:
+#     val: ???
+#     name: carFollowingModel
+#     choices:
+#       - IDM
+#       - Krauss
+#       - EIDM
 
 
-  SeedConfig:
-    num_samples: 10
-    range:
-      - 0
-      - 1000
-    seed: ???
+#   SeedConfig:
+#     num_samples: 10
+#     range:
+#       - 0
+#       - 1000
+#     seed: ???
 
-  ReadConfig:
-    regex: "*/config.yaml"
-    root_dir: ${Metadata.output}
+#   ReadConfig:
+#     regex: "*/config.yaml"
+#     root_dir: ${Metadata.output}
   
-  CFTableConfig:
-    table: /Users/max/Development/sumo-uc-23/data/rw_east_thru_summary_accel_decel.csv
-    save_path: ${Metadata.cwd}/vehDescript.xml
-    seed: ${Blocks.SeedConfig.seed}
-    additional_params: 
-      carFollowingModel: ${Blocks.IteratorConfig.val}
-    cf_params:
-      accel: accel
-      decel: decel
-      # freeflow_speed: speedFactor
-    vehicle_distribution_name: vehDist
-    sample_mode: row-wise
-    num_samples: 500
+#   CFTableConfig:
+#     table: /Users/max/Development/sumo-uc-23/data/rw_east_thru_summary_accel_decel.csv
+#     save_path: ${Metadata.cwd}/vehDescript.xml
+#     seed: ${Blocks.SeedConfig.seed}
+#     additional_params: 
+#       carFollowingModel: ${Blocks.IteratorConfig.val}
+#     cf_params:
+#       accel: accel
+#       decel: decel
+#       # freeflow_speed: speedFactor
+#     vehicle_distribution_name: vehDist
+#     sample_mode: row-wise
+#     num_samples: 500
   
-  SimulationConfig:
-    start_time: 0 # Starts at 5:30AM
-    end_time: 22800  # Ends at 11:50AM
-    net_file: ${Metadata.simulation_root}/sumo-xml/simplified_reworked.net.xml
-    gui: false
-    route_files:
-      - /Users/max/Development/tmp/CarFollowingSamples/Simulation-Files/200-600-Poisson/route.0.xml
-      - /Users/max/Development/tmp/CarFollowingSamples/Simulation-Files/200-600-Poisson/route.1.xml
-      - /Users/max/Development/tmp/CarFollowingSamples/Simulation-Files/200-600-Poisson/route.2.xml
-      - /Users/max/Development/tmp/CarFollowingSamples/Simulation-Files/200-600-Poisson/route.3.xml
+#   SimulationConfig:
+#     start_time: 0 # Starts at 5:30AM
+#     end_time: 22800  # Ends at 11:50AM
+#     net_file: ${Metadata.simulation_root}/sumo-xml/simplified_reworked.net.xml
+#     gui: false
+#     route_files:
+#       - /Users/max/Development/tmp/CarFollowingSamples/Simulation-Files/200-600-Poisson/route.0.xml
+#       - /Users/max/Development/tmp/CarFollowingSamples/Simulation-Files/200-600-Poisson/route.1.xml
+#       - /Users/max/Development/tmp/CarFollowingSamples/Simulation-Files/200-600-Poisson/route.2.xml
+#       - /Users/max/Development/tmp/CarFollowingSamples/Simulation-Files/200-600-Poisson/route.3.xml
     
-    additional_files:
-      - ${Metadata.simulation_root}/sumo-xml/detectors/radar_boxes.xml
-      - ${Metadata.simulation_root}/sumo-xml/detectors/e2.detectors.add.xml
-      - ${Metadata.simulation_root}/sumo-xml/traffic-lights/NEMA/coordinated/63082002.NEMA.Coordinated.xml
-      - ${Metadata.simulation_root}/sumo-xml/traffic-lights/NEMA/coordinated/63082003.NEMA.Coordinated.xml
-      - ${Metadata.simulation_root}/sumo-xml/traffic-lights/NEMA/coordinated/63082004.NEMA.Coordinated.xml
-      - ${Blocks.CFTableConfig.save_path}
+#     additional_files:
+#       - ${Metadata.simulation_root}/sumo-xml/detectors/radar_boxes.xml
+#       - ${Metadata.simulation_root}/sumo-xml/detectors/e2.detectors.add.xml
+#       - ${Metadata.simulation_root}/sumo-xml/traffic-lights/NEMA/coordinated/63082002.NEMA.Coordinated.xml
+#       - ${Metadata.simulation_root}/sumo-xml/traffic-lights/NEMA/coordinated/63082003.NEMA.Coordinated.xml
+#       - ${Metadata.simulation_root}/sumo-xml/traffic-lights/NEMA/coordinated/63082004.NEMA.Coordinated.xml
+#       - ${Blocks.CFTableConfig.save_path}
     
-    step_length: 0.1
-    seed: 42
-    additional_sim_params:
-      - --output-prefix
-      - ${Metadata.run_id}_
-      - --fcd-output
-      - ${Metadata.cwd}/fcd.xml
-      - --fcd-output.filter-shapes
-      - Radar137_East_thru
-      - --seed
-      - ${Blocks.SeedConfig.seed}
-    simulation_output: ${Metadata.cwd}/sumo_output.txt
+#     step_length: 0.1
+#     seed: 42
+#     additional_sim_params:
+#       - --output-prefix
+#       - ${Metadata.run_id}_
+#       - --fcd-output
+#       - ${Metadata.cwd}/fcd.xml
+#       - --fcd-output.filter-shapes
+#       - Radar137_East_thru
+#       - --seed
+#       - ${Blocks.SeedConfig.seed}
+#     simulation_output: ${Metadata.cwd}/sumo_output.txt
   
-  SaveConfig:
-    save_path: ${Metadata.cwd}/config.yaml
+#   SaveConfig:
+#     save_path: ${Metadata.cwd}/config.yaml
   
-  MvFileConfig:
-    mv_files:
-      - source: ${Metadata.simulation_root}/sumo-xml/detectors/${Metadata.run_id}_detectors.out.xml
-        target: ${Metadata.cwd}/${Metadata.run_id}_detectors.out.xml
+#   MvFileConfig:
+#     mv_files:
+#       - source: ${Metadata.simulation_root}/sumo-xml/detectors/${Metadata.run_id}_detectors.out.xml
+#         target: ${Metadata.cwd}/${Metadata.run_id}_detectors.out.xml
 
-  XMLConvertConfig:
-    source: ${Metadata.cwd}/${Metadata.run_id}_fcd.xml
-    target: ${Metadata.cwd}/fcd.parquet
-    format: parquet
-    delete_source: true
-    elements: 
-      - name: timestep
-        attributes:
-        - time
-      - name: vehicle
-        attributes:
-        - id
-        - x 
-        - "y" 
-        - z 
-        - angle 
-        - type 
-        - speed
-        - pos
-        - lane
+#   XMLConvertConfig:
+#     source: ${Metadata.cwd}/${Metadata.run_id}_fcd.xml
+#     target: ${Metadata.cwd}/fcd.parquet
+#     format: parquet
+#     delete_source: true
+#     elements: 
+#       - name: timestep
+#         attributes:
+#         - time
+#       - name: vehicle
+#         attributes:
+#         - id
+#         - x 
+#         - "y" 
+#         - z 
+#         - angle 
+#         - type 
+#         - speed
+#         - pos
+#         - lane
   
-Pipeline:
-  pipeline:
+# Pipeline:
+#   pipeline:
     
-    - block: Generate Samples
-      producers:
-        - function: producers.generate_iterator
-          config: ${Blocks.IteratorConfig}
-        - function: producers.generate_random_seed
-          config: ${Blocks.SeedConfig}
-      consumers:
-        - function: vehicle_distributions.create_distribution_pandas
-          config: ${Blocks.CFTableConfig}
-        - function: io.save_config
-          config: ${Blocks.SaveConfig}
-      parallel: false
-      number_of_workers: 1
+#     - block: Generate Samples
+#       producers:
+#         - function: producers.generate_iterator
+#           config: ${Blocks.IteratorConfig}
+#         - function: producers.generate_random_seed
+#           config: ${Blocks.SeedConfig}
+#       consumers:
+#         - function: vehicle_distributions.create_distribution_pandas
+#           config: ${Blocks.CFTableConfig}
+#         - function: io.save_config
+#           config: ${Blocks.SaveConfig}
+#       parallel: false
+#       number_of_workers: 1
 
-    - block: Run Simulation
-      producers:
-        - function: producers.read_configs
-          config: ${Blocks.ReadConfig}
-      consumers:
-        - function: simulation.run_sumo
-          config: ${Blocks.SimulationConfig}
-        - function: io.mv_file
-          config: ${Blocks.MvFileConfig}
-        - function: xml.convert_xml_to_parquet
-          config: ${Blocks.XMLConvertConfig}
-        - function: xml.convert_xml_to_parquet_pandas
-          config:
-            source: ${Metadata.cwd}/${Metadata.run_id}_detectors.out.xml
-            target: ${Metadata.cwd}/detectors.parquet
-            format: parquet
-            delete_source: true
-            elements:
-              - 
-      parallel: true
-      number_of_workers: 4
+#     - block: Run Simulation
+#       producers:
+#         - function: producers.read_configs
+#           config: ${Blocks.ReadConfig}
+#       consumers:
+#         - function: simulation.run_sumo
+#           config: ${Blocks.SimulationConfig}
+#         - function: io.mv_file
+#           config: ${Blocks.MvFileConfig}
+#         - function: xml.convert_xml_to_parquet
+#           config: ${Blocks.XMLConvertConfig}
+#         - function: xml.convert_xml_to_parquet_pandas
+#           config:
+#             source: ${Metadata.cwd}/${Metadata.run_id}_detectors.out.xml
+#             target: ${Metadata.cwd}/detectors.parquet
+#             format: parquet
+#             delete_source: true
+#             elements:
+#               - 
+#       parallel: true
+#       number_of_workers: 4
 
-  executor: ray
-  parallel_proc: auto
+#   executor: ray
+#   parallel_proc: auto
