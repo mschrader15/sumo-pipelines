@@ -95,18 +95,18 @@ def main(config: Path, debug: bool) -> None:
                 ],
                 parallel=True,
             )
-            procs = []
-            for f in recursive_producer(
-                [
-                    (
-                        consumer.function,
-                        f"Pipeline.pipeline[{k}].producers[{i}].config",
-                    )
-                    for i, consumer in enumerate(pipeline.producers)
-                ],
-            )(c):
-                procs.append(consumer.remote(f))
-
+            procs = [
+                consumer.remote(f)
+                for f in recursive_producer(
+                    [
+                        (
+                            consumer.function,
+                            f"Pipeline.pipeline[{k}].producers[{i}].config",
+                        )
+                        for i, consumer in enumerate(pipeline.producers)
+                    ],
+                )(c)
+            ]
             ray.get(procs)
 
         else:
