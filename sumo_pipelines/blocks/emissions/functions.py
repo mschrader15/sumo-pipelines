@@ -136,11 +136,13 @@ def fast_timestep_energy(
         time_list = []
         for time_end in finder:
             time_list.append([time_start[1].decode(), 0])
+            vehicle_count = 0
             for match in re.finditer(pattern, data[time_start.span()[1]:time_end.span()[0]]):
                 if (
                 (not x_filter or (x_filter and x_filter(float(match[3]))))
                     and (not y_filter or (y_filter and y_filter(float(match[4]))))
                 ):
+                    vehicle_count += 1
                     fc = float(match[2]) / 1e3  # this is in mg/s * 1 / 1000 g/mg
                     if diesel_filter or gasoline_filter:
                         if gasoline_filter(match[1].decode()):
@@ -150,6 +152,7 @@ def fast_timestep_energy(
                         else:
                             raise ValueError("The filter did not match any of the classes")
                     time_list[-1][-1] += fc
+            time_list[-1][-1] *= (config.sim_step / vehicle_count if config.vehicle_average else config.sim_step)
             time_start = time_end
         del data
 

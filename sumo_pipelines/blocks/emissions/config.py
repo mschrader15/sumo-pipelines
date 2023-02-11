@@ -8,6 +8,7 @@ class FuelTotalConfig:
     output_path: str
     sim_step: float
     delete_xml: bool = field(default=True)
+    vehicle_average: bool = field(default=False)
     output_time_filter_lower: Any = field(default=None)
     output_time_filter_upper: Any = field(default=None)
     gasoline_filter: Any = field(default=None)
