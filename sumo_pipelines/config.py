@@ -146,7 +146,7 @@ def recursive_producer(producers: List[Tuple[str, List[str]]]) -> None:
 
     def _recursive_producer(main_config, producers: List[Tuple[Callable, List[str]]] = producers):
         nonlocal i
-        for f in producers[0][0](OmegaConf.select(main_config, producers[0][1]), main_config):
+        for f in producers[0][0](OmegaConf.select(main_config, producers[0][1]), main_config, producers[0][1]):
             if len(producers) > 1:
                 yield from _recursive_producer(f, producers[1:])
             else:

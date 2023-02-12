@@ -32,7 +32,8 @@ def create_distribution_pandas(
 
     samples = samples.rename(columns=cf_config.cf_params).sample(
         cf_config.num_samples,
-        random_state=cf_config.seed
+        random_state=cf_config.seed,
+        replace=True
     )
     # add the vehicle type
     vehicles = []

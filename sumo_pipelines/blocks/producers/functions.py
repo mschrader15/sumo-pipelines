@@ -18,7 +18,10 @@ from .config import ReadConfig, SeedConfig, IteratorConfig
 
 
 def read_configs(
-    config: ReadConfig, parent_config: DictConfig
+    config: ReadConfig, 
+    parent_config: DictConfig,
+    *args,
+    **kwargs,
 ) -> Generator[DictConfig, None, None]:
     """
     This function reads config files using regex.
@@ -41,7 +44,10 @@ def read_configs(
 
 
 def generate_random_seed(
-    config: SeedConfig, parent_config: DictConfig
+    config: SeedConfig, 
+    parent_config: DictConfig,
+    *args,
+    **kwargs,
 ) -> Generator[DictConfig, None, None]:
     # this function returns the a sequence of random seeds, to be consumed by the caller.
     # this is a simple example, but it could be used to generate a sequence of random seeds
@@ -55,11 +61,14 @@ def generate_random_seed(
 
 
 def generate_iterator(
-    config: IteratorConfig, parent_config: DictConfig
+    config: IteratorConfig, 
+    parent_config: DictConfig,
+    dotpath: str,
+    **kwargs,
 ) -> Generator[DictConfig, None, None]:
     # this function returns the a sequence of random seeds, to be consumed by the caller.
     # this is a simple example, but it could be used to generate a sequence of random seeds
     for choice in config.choices:
         new_conf = deepcopy(parent_config)
-        new_conf.Blocks.IteratorConfig.val = choice
+        OmegaConf.update(new_conf, f"{dotpath}.val", choice)
         yield new_conf
