@@ -22,7 +22,7 @@ class CFTableConfig:
 
 
 @dataclass
-class CFSimpleConfig:
+class s:
     """
     This class is custom to our use case. It is used to sample parameters from a table
     """

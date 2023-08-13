@@ -59,12 +59,13 @@ class MetaData:
 
 
 def get_blocks():
-    
     blocks = {}
     for block_dir in (Path(__file__).parent / "blocks").iterdir():
         if block_dir.is_dir() and not block_dir.name.startswith("_"):
             search_path = f"sumo_pipelines.blocks.{block_dir.name}.config"
-            for _, c in inspect.getmembers(importlib.import_module(search_path), inspect.isclass):
+            for _, c in inspect.getmembers(
+                importlib.import_module(search_path), inspect.isclass
+            ):
                 # if hasattr(config, "__name__"):
                 # asserts that the class is in the same module as the predicate
                 if c.__module__ == search_path:
@@ -74,11 +75,9 @@ def get_blocks():
 
 Blocks = make_dataclass(
     "Blocks",
-    [
-        (config.__name__, Optional[config])
-        for config in get_blocks().values()
-    ],
+    [(config.__name__, Optional[config]) for config in get_blocks().values()],
 )
+
 
 @dataclass
 class PipelineConfig:
@@ -95,7 +94,7 @@ def to_yaml(path: Path, config: DictConfig, resolve):
         f.write(OmegaConf.to_yaml(config, resolve=resolve))
 
 
-def open_config(path: Path, structured: OmegaConf = None) -> PipelineConfig:
+def open_config(path: Path, structured: OmegaConf = None,) -> PipelineConfig:
     """Open a config file and return a DictConfig object"""
 
     time_ = datetime.now().strftime("%m.%d.%Y_%H.%M.%S")
@@ -118,6 +117,7 @@ def open_config(path: Path, structured: OmegaConf = None) -> PipelineConfig:
 
     return merged
 
+
 def open_completed_config(path: Path, validate: bool = True) -> PipelineConfig:
     """Open a config file and return a DictConfig object"""
 
@@ -127,26 +127,38 @@ def open_completed_config(path: Path, validate: bool = True) -> PipelineConfig:
         )
     if not validate:
         return c
-        
+
     s = OmegaConf.structured(PipelineConfig)
     return OmegaConf.merge(s, c)
 
 
 def load_function(function: str) -> Callable:
     """Load a function from a string"""
+    # allow already loaded functions
+    if callable(function):
+        return function
+    # load the function
+    if function.startswith("external"):
+        return importlib.import_module(
+            ".".join((function.lstrip("external.")).split(".")[:-1])
+        ).__dict__[function.split(".")[-1]]
+    
     return importlib.import_module(
         f"sumo_pipelines.blocks.{function.split('.')[0]}.functions"
     ).__dict__[function.split(".")[-1]]
-
 
 
 def recursive_producer(producers: List[Tuple[str, List[str]]]) -> None:
     producers = [(load_function(function), dotpath) for function, dotpath in producers]
     i = 0
 
-    def _recursive_producer(main_config, producers: List[Tuple[Callable, List[str]]] = producers):
+    def _recursive_producer(
+        main_config, producers: List[Tuple[Callable, List[str]]] = producers
+    ):
         nonlocal i
-        for f in producers[0][0](OmegaConf.select(main_config, producers[0][1]), main_config, producers[0][1]):
+        for f in producers[0][0](
+            OmegaConf.select(main_config, producers[0][1]), main_config, producers[0][1]
+        ):
             if len(producers) > 1:
                 yield from _recursive_producer(f, producers[1:])
             else:
@@ -156,7 +168,7 @@ def recursive_producer(producers: List[Tuple[str, List[str]]]) -> None:
                     Path(f.Metadata.cwd).mkdir(parents=True, exist_ok=True)
                     i += 1
                 yield f
-        
+
     return _recursive_producer
 
 
@@ -173,4 +185,3 @@ def create_consumers(
             f(OmegaConf.select(main_config, dotpath), main_config)
 
     return ray.remote(consumer) if parallel else consumer
-

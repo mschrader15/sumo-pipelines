@@ -17,27 +17,7 @@ def run_sumo(config: SimulationConfig, parent_config: DictConfig) -> None:
         config (SimulationConfig): The configuration for the simulation.
     """
 
-    sumo = sumolib.checkBinary("sumo-gui" if config.gui else "sumo")
-
-    sumo_cmd = [
-        sumo,
-        "-n",
-        config.net_file,
-        "-r",
-        ",".join(config["route_files"]),
-        "-a",
-        ",".join(config["additional_files"]),
-        "--begin",
-        str(config.start_time),
-        "--end",
-        str(config.end_time),
-        "--step-length",
-        str(config.step_length),
-        *config.additional_sim_params,
-    ]
-
-    # make sure that everything is a string
-    sumo_cmd = [str(x) for x in sumo_cmd]
+    sumo_cmd = config.make_cmd()
 
     if config.simulation_output:
         with open(config.simulation_output, "w") as f:
@@ -47,3 +27,13 @@ def run_sumo(config: SimulationConfig, parent_config: DictConfig) -> None:
     
     if s.returncode != 0:
         raise RuntimeError("Sumo failed to run")
+
+
+
+def online_traci(
+        config: SimulationConfig,
+        parent_config: DictConfig,
+) -> None:
+    
+    # TODO: Implement this function
+    step_function = parent_config.step_function
