@@ -31,3 +31,13 @@ class MvFileConfig:
     """
 
     mv_files: List[_MvFilePair]
+
+
+@dataclass
+class RemoveFileConfig:
+    """
+    This class is used to remove files
+    """
+
+    rm_files: List[str]
+

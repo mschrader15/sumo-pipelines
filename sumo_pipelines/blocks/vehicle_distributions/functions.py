@@ -1,6 +1,6 @@
 from omegaconf import DictConfig
 
-from .config import CFTableConfig, CFSimpleConfig
+from .config import CFTableConfig, SimpleCFConfig
 
 try:
     import pandas as pd
@@ -117,7 +117,7 @@ def create_independent_distribution_pandas(
 
 
 def create_simple_distribution(
-    cf_config: CFSimpleConfig,
+    cf_config: SimpleCFConfig,
     config: DictConfig,
 ) -> None:
     

@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from .config import open_config, recursive_producer, create_consumers
+from .config import open_config
+from .pipe_handlers import create_consumers, recursive_producer
 
 try:
     import ray

@@ -91,6 +91,7 @@ class PipelineConfig:
 def to_yaml(path: Path, config: DictConfig, resolve):
     """Save a config file"""
     with open(path, "w") as f:
+        # remove empty values
         f.write(OmegaConf.to_yaml(config, resolve=resolve))
 
 
@@ -130,58 +131,3 @@ def open_completed_config(path: Path, validate: bool = True) -> PipelineConfig:
 
     s = OmegaConf.structured(PipelineConfig)
     return OmegaConf.merge(s, c)
-
-
-def load_function(function: str) -> Callable:
-    """Load a function from a string"""
-    # allow already loaded functions
-    if callable(function):
-        return function
-    # load the function
-    if function.startswith("external"):
-        return importlib.import_module(
-            ".".join((function.lstrip("external.")).split(".")[:-1])
-        ).__dict__[function.split(".")[-1]]
-    
-    return importlib.import_module(
-        f"sumo_pipelines.blocks.{function.split('.')[0]}.functions"
-    ).__dict__[function.split(".")[-1]]
-
-
-def recursive_producer(producers: List[Tuple[str, List[str]]]) -> None:
-    producers = [(load_function(function), dotpath) for function, dotpath in producers]
-    i = 0
-
-    def _recursive_producer(
-        main_config, producers: List[Tuple[Callable, List[str]]] = producers
-    ):
-        nonlocal i
-        for f in producers[0][0](
-            OmegaConf.select(main_config, producers[0][1]), main_config, producers[0][1]
-        ):
-            if len(producers) > 1:
-                yield from _recursive_producer(f, producers[1:])
-            else:
-                if f.Metadata.get("run_id", None) is None:
-                    f.Metadata.run_id = f"{i}"
-                    # make the output directory
-                    Path(f.Metadata.cwd).mkdir(parents=True, exist_ok=True)
-                    i += 1
-                yield f
-
-    return _recursive_producer
-
-
-def create_consumers(
-    function_n_configs: List[Tuple[str, List[str]]], parallel: bool = False
-) -> Union[Callable, object]:
-    """Load a consumer from a config file"""
-    func = [
-        (load_function(function), dotpath) for function, dotpath in function_n_configs
-    ]
-
-    def consumer(main_config):
-        for f, dotpath in func:
-            f(OmegaConf.select(main_config, dotpath), main_config)
-
-    return ray.remote(consumer) if parallel else consumer

@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Generator
 from omegaconf import OmegaConf, DictConfig
 
-from .config import SaveConfig, MvFileConfig
+from .config import SaveConfig, MvFileConfig, RemoveFileConfig
 
 
 def save_config(config: SaveConfig, parent_config: OmegaConf) -> None:
@@ -33,3 +33,17 @@ def mv_file(config: SaveConfig, parent_config: OmegaConf) -> None:
     for f in config.mv_files:
         Path(f.target).parent.mkdir(parents=True, exist_ok=True)
         Path(f.source).rename(f.target)
+
+def rm_file(config: RemoveFileConfig, parent_config: OmegaConf) -> None:
+    """
+    This function removes a list of target files
+
+    Args:
+        config (RemoveFileConfig): The config file to save.
+    """
+    import os
+    for f in config.rm_files:
+        if os.path.isfile(f):
+            os.remove(f)
+        else:
+            print(f"No such file: {f}")
