@@ -21,15 +21,15 @@ except ImportError:
 
 @dataclass
 class PipePiece:
-    function: str
+    function: Any  # this is really a callable
     config: Dict
 
 
 @dataclass
 class PipeBlock:
     block: str
-    producers: List[PipePiece]
-    consumers: List[PipePiece]
+    producers: List[PipePiece] = field(default_factory=list)
+    consumers: List[PipePiece] = field(default_factory=list)
     parallel: bool = field(default=False)
     number_of_workers: Union[str, int] = field(default="auto")
 
@@ -73,6 +73,11 @@ def get_blocks():
     return blocks
 
 
+# doing funny stuff for the blocks
+@dataclass
+class Blocks:
+    pass
+
 Blocks = make_dataclass(
     "Blocks",
     [(config.__name__, Optional[config]) for config in get_blocks().values()],
@@ -87,47 +92,3 @@ class PipelineConfig:
     Blocks: Blocks
     Pipeline: Pipeline
 
-
-def to_yaml(path: Path, config: DictConfig, resolve):
-    """Save a config file"""
-    with open(path, "w") as f:
-        # remove empty values
-        f.write(OmegaConf.to_yaml(config, resolve=resolve))
-
-
-def open_config(path: Path, structured: OmegaConf = None,) -> PipelineConfig:
-    """Open a config file and return a DictConfig object"""
-
-    time_ = datetime.now().strftime("%m.%d.%Y_%H.%M.%S")
-
-    s = OmegaConf.structured(PipelineConfig) if structured is None else structured
-    c = OmegaConf.load(
-        path,
-    )
-
-    merged = OmegaConf.merge(s, c)
-
-    # handle the output directory
-    merged.Metadata.output = str(Path(merged.Metadata.output).joinpath(time_))
-    # create the output directory
-    Path(merged.Metadata.output).mkdir(parents=True, exist_ok=True)
-    # save the config file at the top level. Don't resolve the config file
-    to_yaml(Path(merged.Metadata.output).joinpath("config.yaml"), merged, False)
-
-    print("Config file saved at: ", merged.Metadata.output)
-
-    return merged
-
-
-def open_completed_config(path: Path, validate: bool = True) -> PipelineConfig:
-    """Open a config file and return a DictConfig object"""
-
-    with open(path, "r") as f:
-        c = OmegaConf.load(
-            f,
-        )
-    if not validate:
-        return c
-
-    s = OmegaConf.structured(PipelineConfig)
-    return OmegaConf.merge(s, c)

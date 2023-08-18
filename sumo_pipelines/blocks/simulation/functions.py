@@ -7,6 +7,34 @@ from omegaconf import DictConfig
 from .config import SimulationConfig
 
 
+def make_cmd(
+    config: SimulationConfig,
+):
+    sumo = sumolib.checkBinary("sumo-gui" if config.gui else "sumo")
+
+    return list(
+        map(
+            str,
+            [
+                sumo,
+                "-n",
+                config.net_file,
+                "-r",
+                ",".join(config.route_files),
+                "-a",
+                ",".join(list(map(str, config.additional_files))),
+                "--begin",
+                str(config.start_time),
+                "--end",
+                str(config.end_time),
+                "--step-length",
+                str(config.step_length),
+                *config.additional_sim_params,
+            ],
+        )
+    )
+
+
 def run_sumo(config: SimulationConfig, parent_config: DictConfig) -> None:
     """
     This is a standalone function that runs sumo and returns nothing.
@@ -23,17 +51,17 @@ def run_sumo(config: SimulationConfig, parent_config: DictConfig) -> None:
         with open(config.simulation_output, "w") as f:
             s = subprocess.run(sumo_cmd, check=True, stdout=f, stderr=f)
     else:
-        s = subprocess.run(sumo_cmd, )
-    
+        s = subprocess.run(
+            sumo_cmd,
+        )
+
     if s.returncode != 0:
         raise RuntimeError("Sumo failed to run")
 
 
-
 def online_traci(
-        config: SimulationConfig,
-        parent_config: DictConfig,
+    config: SimulationConfig,
+    parent_config: DictConfig,
 ) -> None:
-    
     # TODO: Implement this function
     step_function = parent_config.step_function

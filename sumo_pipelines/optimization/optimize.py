@@ -14,8 +14,11 @@ from ray.tune.schedulers import AsyncHyperBandScheduler, HyperBandScheduler
 import numpy as np
 import random
 
+from sumo_pipelines.optimization.core import handle_results, target_wrapper, with_parameter_wrapper
+
 
 from .config import OptimizationConfig
+from sumo_pipelines.utils.config_helpers import create_custom_resolvers, open_config_structured
 
 
 try:
@@ -28,10 +31,11 @@ except ImportError:
 
 os.environ["PYTHONWARNINGS"] = "ignore::DeprecationWarning"
 
+create_custom_resolvers()
 
 def seed_everything(config: OptimizationConfig):
-    np.random.seed(config.MetaData.random_seed)
-    random.seed(config.MetaData.random_seed)
+    np.random.seed(config.Metadata.random_seed)
+    random.seed(config.Metadata.random_seed)
 
 def initalize_ray(smoke_test: bool):
     # override the resources
@@ -40,7 +44,13 @@ def initalize_ray(smoke_test: bool):
     ray.init(num_cpus=1 if smoke_test else None, local_mode=smoke_test)
 
 
-def run_optimization(config_obj: OptimizationConfig, smoke_test: bool):
+def trial_name_creator(trial):
+    return f"{trial.trainable_name}_{trial.trial_id}"
+
+def trial_dirname_creator(trial):
+    return f"{trial.trainable_name}_{trial.trial_id}"
+
+def run_optimization_core(config_obj: OptimizationConfig, smoke_test: bool):
     # check that GUI is off if we aren't in smoke test mode
     if not smoke_test and config_obj.Blocks.SimulationConfig.gui:
         print("Turning off GUI for calibration.")
@@ -49,28 +59,41 @@ def run_optimization(config_obj: OptimizationConfig, smoke_test: bool):
     # set the seed
     seed_everything(config_obj)
 
-    # build the runner
-    runner = config_obj.Optimization.Objective.function
-
-    # check if there is wrapping to do
-    if config_obj.Optimization.ObjectiveWrapper is not None:
-        runner = config_obj.Optimization.ObjectiveWrapper.function(
-            runner,
-            config_obj
-        )
-    
     # initalize ray
     # check first if it is not already initalized
     if not ray.is_initialized():
         initalize_ray(smoke_test)
 
+    
+    # build the runner
+    runner = with_parameter_wrapper(
+        trainable=target_wrapper(config_obj),
+        config=config_obj,
+    )
+
+
     # run the optimization
-    tuner = config_obj.Optimization.Tuner.gen_function()(
+    tuner: tune.Tuner = config_obj.Optimization.Tuner.gen_function(
+        **config_obj.Optimization.Tuner.gen_function_kwargs,
+        trial_name_creator=trial_name_creator,
+        trial_dirname_creator=trial_dirname_creator,
+        # trial_dirname_creator=lambda trial: f"{trial.trainable_name}_{trial.trial_id}",
+    )(
+        trainable=runner,
+        param_space=config_obj.Optimization.SearchSpace.build_function(
+            config_obj.Optimization.SearchSpace
+        ),
         **config_obj.Optimization.Tuner.tuner_kwargs,
     )
-    analysis = tuner.fit()
+    
+    analysis: tune.ResultGrid = tuner.fit()
 
-    print("Best config: ", analysis.get_best_result().config)
-    print("Path: ", analysis.get_best_result().path)
+    handle_results(analysis, config_obj)
 
-    analysis.get_dataframe().to_csv(Path(config_obj.Config.output_path) / "results.csv")
+
+def run_optimization(config_path: Path, smoke_test: bool):
+    # parse the config
+    config_obj = open_config_structured(config_path)
+
+    # run the optimization
+    run_optimization_core(config_obj, smoke_test)

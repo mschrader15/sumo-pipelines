@@ -1,4 +1,3 @@
-
 import importlib
 from pathlib import Path
 from typing import Callable, List, Tuple, Union, TYPE_CHECKING
@@ -10,6 +9,9 @@ import ray
 if TYPE_CHECKING:
     # prevent circular imports
     from sumo_pipelines.config import Pipeline, PipeBlock
+else:
+    Pipeline = None
+    PipeBlock = None
 
 
 def load_function(function: str) -> Callable:
@@ -20,9 +22,14 @@ def load_function(function: str) -> Callable:
     # load the function
     if function.startswith("external"):
         return importlib.import_module(
-            ".".join((function.lstrip("external.")).split(".")[:-1])
+            ".".join((function.lstrip("external").lstrip(".")).split(".")[:-1])
         ).__dict__[function.split(".")[-1]]
-    
+    elif function.startswith("optimization"):
+        return importlib.import_module(
+            ".".join(
+                ("sumo_pipelines", *((function).split(".")[:-1]))
+            )
+        ).__dict__[function.split(".")[-1]]
     return importlib.import_module(
         f"sumo_pipelines.blocks.{function.split('.')[0]}.functions"
     ).__dict__[function.split(".")[-1]]
@@ -34,7 +41,7 @@ def recursive_producer(producers: List[Tuple[str, List[str]]]) -> callable:
 
     Args:
         producers (List[Tuple[str, List[str]]]): A list of producers
-    
+
     Returns:
         callable: A recursive producer
     """
@@ -87,13 +94,35 @@ def create_consumers(
 
 def get_pipeline_by_name(config: Pipeline, name: str) -> Tuple[PipeBlock, str]:
     """
-    Get a pipeline by name. Returns the pipeline and the dotpath to the pipeline
+    Get a pipeline by name.
 
     Args:
         config (Pipeline): The pipeline config
         name (str): The name of the pipeline
     """
-    for k, pipe in enumerate(config.pipeline):
+    for k, pipe in enumerate(config.Pipeline.pipeline):
         if pipe.block == name:
             # build the pipeline
-            return pipe, f"Pipeline.pipeline[{k}]"
+            return pipe
+
+
+def execute_pipe_block(
+    block: PipeBlock,
+    main_config: Pipeline,
+) -> None:
+    assert (
+        len(block.producers) == 0
+    ), "Producers are not supported when executing a pipeline with this function"
+    assert (
+        block.parallel is False
+    ), "Parallel pipelines are not supported when executing a pipeline with this function"
+
+    # load the functions
+    functions = [
+        (block_piece.function, block_piece.config)
+        for block_piece in block.consumers
+    ]
+
+    # execute the functions
+    for f, c in functions:
+        f(c, main_config)

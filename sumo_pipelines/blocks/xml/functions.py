@@ -3,8 +3,31 @@ from omegaconf import DictConfig
 import sumolib
 import pyarrow as pa
 import pyarrow.parquet as pq
+import re
 
-from .config import XMLConvertConfig
+from .config import XMLConvertConfig, XMLChangeOutputConfig
+
+
+def update_output_file(config: XMLChangeOutputConfig, parent_config: DictConfig) -> None:
+    """
+    This function takes an xml file that has an output path (like SUMO's detector files), 
+    and changes the target output destination to the target path.
+
+    """
+    for change in config.changes:    
+        # Open the xml file
+        with open(change.source, 'r') as file:
+            filedata = file.read()
+
+        # Replace the target output destination
+        filedata = re.sub(r'file="([^"]*)"', f'file="{change.new_output}"', filedata)
+
+        # Write the file out again
+        with open(change.target, 'w') as file:
+            file.write(filedata)
+
+
+
 
 
 def convert_xml_to_parquet(config: XMLConvertConfig, parent_config: DictConfig) -> None:

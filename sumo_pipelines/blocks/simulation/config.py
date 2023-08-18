@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List
+from typing import Any, List
 from dataclasses import dataclass, field
 
 import sumolib
@@ -18,30 +18,7 @@ class SimulationConfig:
     additional_sim_params: List[str] = field(default_factory=list)
     simulation_output: str = ""
     warmup_time: int = field(default=1800)
+    make_cmd: Any = "${import:simulation.make_cmd}"
 
-    def make_cmd(
-        self,
-    ):
-        sumo = sumolib.checkBinary("sumo-gui" if self.gui else "sumo")
 
-        return list(
-            map(
-                str,
-                [
-                    sumo,
-                    "-n",
-                    self.net_file,
-                    "-r",
-                    ",".join(self.route_files),
-                    "-a",
-                    ",".join(self.additional_files),
-                    "--begin",
-                    str(self.start_time),
-                    "--end",
-                    str(self.end_time),
-                    "--step-length",
-                    str(self.step_length),
-                    *self.additional_sim_params,
-                ],
-            )
-        )
+

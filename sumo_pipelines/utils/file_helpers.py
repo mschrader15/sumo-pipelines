@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Generator
-from sumo_pipelines.config import PipelineConfig, open_completed_config
+from sumo_pipelines.config import PipelineConfig
+from sumo_pipelines.utils.config_helpers import open_completed_config
 
 
 

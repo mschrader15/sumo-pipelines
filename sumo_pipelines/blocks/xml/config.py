@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from typing import Dict, List
+from omegaconf import ListConfig
 
 
 @dataclass
@@ -16,3 +17,15 @@ class XMLConvertConfig:
 
     def __post_init__(self):
         assert len(self.elements) < 3
+
+
+@dataclass
+class XMLChangeConfig:
+    source: str
+    target: str
+    new_output: str
+
+
+@dataclass
+class XMLChangeOutputConfig:
+    changes: List[XMLChangeConfig]

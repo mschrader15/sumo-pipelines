@@ -1,8 +1,8 @@
 from pathlib import Path
-from typing import Generator
-from omegaconf import OmegaConf, DictConfig
+from omegaconf import OmegaConf
+from copy import deepcopy
 
-from .config import SaveConfig, MvFileConfig, RemoveFileConfig
+from .config import SaveConfig, RemoveFileConfig
 
 
 def save_config(config: SaveConfig, parent_config: OmegaConf) -> None:
@@ -13,14 +13,20 @@ def save_config(config: SaveConfig, parent_config: OmegaConf) -> None:
         config (SaveConfig): The config file to save.
     """
     from sumo_pipelines.config import MetaData
-
+    local_config = deepcopy(parent_config)
     Path(config.save_path).parent.mkdir(parents=True, exist_ok=True)
     with open(config.save_path, "w") as f:
         # resolve only the metadata
-        parent_config.Metadata = MetaData(
-            **OmegaConf.to_container(parent_config.Metadata, resolve=True)
+        local_config.Metadata = MetaData(
+            **OmegaConf.to_container(local_config.Metadata, resolve=True)
         )
-        f.write(OmegaConf.to_yaml(parent_config, resolve=False))
+        d = OmegaConf.to_container(local_config, resolve=False)
+        # pop blocks that we don't want to save
+        keys = list(d['Blocks'].keys())
+        for b in keys:
+            if isinstance(d['Blocks'][b], str):
+                d['Blocks'].pop(b)
+        f.write(OmegaConf.to_yaml(OmegaConf.create(d), resolve=False))
 
 
 def mv_file(config: SaveConfig, parent_config: OmegaConf) -> None:
@@ -45,5 +51,6 @@ def rm_file(config: RemoveFileConfig, parent_config: OmegaConf) -> None:
     for f in config.rm_files:
         if os.path.isfile(f):
             os.remove(f)
+            print(f"Removed file: {f}")
         else:
             print(f"No such file: {f}")
