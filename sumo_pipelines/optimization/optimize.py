@@ -44,11 +44,7 @@ def initalize_ray(smoke_test: bool):
     ray.init(num_cpus=1 if smoke_test else None, local_mode=smoke_test)
 
 
-def trial_name_creator(trial):
-    return f"{trial.trainable_name}_{trial.trial_id}"
 
-def trial_dirname_creator(trial):
-    return f"{trial.trainable_name}_{trial.trial_id}"
 
 def run_optimization_core(config_obj: OptimizationConfig, smoke_test: bool):
     # check that GUI is off if we aren't in smoke test mode
@@ -56,6 +52,15 @@ def run_optimization_core(config_obj: OptimizationConfig, smoke_test: bool):
         print("Turning off GUI for calibration.")
         config_obj.Blocks.SimulationConfig.gui = False
 
+    
+    def trial_name_creator(trial):
+        return f"{config_obj.Metadata.name}_{config_obj.Optimization.ObjectiveFn.function.__name__}_{trial.trial_id}"
+
+    def trial_dirname_creator(trial):
+        return trial_name_creator(trial)
+    
+    
+    
     # set the seed
     seed_everything(config_obj)
 

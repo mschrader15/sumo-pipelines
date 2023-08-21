@@ -23,65 +23,11 @@ def target_wrapper(
     adding the function to pass the ray search space back config,
     as well as implementing the special Pre-Processing and Cleanup pipelines.
     """
-    # runner = config.Optimization.ObjectiveFn.function
-
-
-    # build a class to wrap the target function
-    # class TrainMe(tune.Trainable):
-
-    #     def __init__(self, config: Dict[str, Any] = None, *args, **kwargs):
-    #         super().__init__(config, *args, **kwargs)
-
-    #         self._omega_config: OmegaConf = None
-    #         self._setup_args: Dict[str, Any] = {
-    #             "args" : None,
-    #             "kwargs" : None
-    #         }
-        
-    #     def setup(self, config: Dict[str, Any], global_config: OptimizationConfig = None, *args, **kwargs):
-    #         # store the args for the call to the train function
-    #         self.setup_args = {
-    #             "args" : args,
-    #             "kwargs" : kwargs
-    #         }
-
-    #         self._omega_config = OmegaConf.create(deepcopy(global_config))
-    #         self._omega_config.Metadata.run_id = tune.get_trial_id()
-    #         self._omega_config.Metadata.cwd = tune.get_trial_dir()
-
-    #         # update the config with the ray dictionary
-    #         self._omega_config.Optimization.SearchSpace.update_function(
-    #             self._omega_config.Optimization.SearchSpace, config
-    #         )
-
-    #         # execute the pre-processing pipeline
-    #         block = get_pipeline_by_name(self._omega_config, "Pre-Processing")
-    #         if block is not None:
-    #             execute_pipe_block(block, self._omega_config)
-            
-    #     def train(self):
-    #         return self._omega_config.Optimization.ObjectiveFn.function(
-    #             config=self._omega_config,
-    #             *self.setup_args["args"],
-    #             **self.setup_args["kwargs"],
-    #         )
-        
-    #     def save_checkpoint(self, checkpoint_dir: str):
-    #         # save the config
-    #         with open(Path(checkpoint_dir) / "config.yaml", "w") as f:
-    #             f.write(OmegaConf.to_yaml(self._omega_config))
-    
-    #     def cleanup(self):
-    #         # try to execute the cleanup pipeline
-    #         block = get_pipeline_by_name(self._omega_config, "Cleanup")
-    #         if block is not None:
-    #             execute_pipe_block(block, self._omega_config)
     def optimize_me(
         config: Dict[str, Any], global_config: OptimizationConfig, *args, **kwargs
     ) -> dict:
         # this is some fuckery
         create_custom_resolvers()
-
         local_global_config = OmegaConf.create(deepcopy(global_config))
 
         # update with the ray convention

@@ -19,6 +19,7 @@ class SimulationConfig:
     simulation_output: str = ""
     warmup_time: int = field(default=1800)
     make_cmd: Any = "${import:simulation.make_cmd}"
+    start_time_rw: Any = None
 
 
 

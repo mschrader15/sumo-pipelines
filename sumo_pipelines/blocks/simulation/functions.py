@@ -63,5 +63,5 @@ def online_traci(
     config: SimulationConfig,
     parent_config: DictConfig,
 ) -> None:
-    # TODO: Implement this function
-    step_function = parent_config.step_function
+    # TODO: Implement this function!
+    raise NotImplementedError("Implement Me")

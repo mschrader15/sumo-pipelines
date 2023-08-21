@@ -3,6 +3,8 @@ from dataclasses import dataclass, field
 
 from dataclasses import MISSING
 
+from omegaconf import DictConfig
+
 from sumo_pipelines.optimization.utils import build_search_space, update_search_space
 from sumo_pipelines.config import MetaData, Pipeline, Blocks
 
@@ -38,6 +40,7 @@ class TunerConfig:
 @dataclass
 class ObjectiveConfig:
     function: Any
+    config: Dict[str, Any] = field(default_factory=dict)
 
 @dataclass
 class ObjectiveWrapperConfig:

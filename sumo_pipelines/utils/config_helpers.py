@@ -14,7 +14,13 @@ def create_custom_resolvers():
     try:
         OmegaConf.register_new_resolver("import", lambda x: load_function(x), use_cache=True)
         OmegaConf.register_new_resolver(
-            "datetime", lambda x: datetime.now().strftime(x or "%m.%d.%Y_%H.%M.%S"), use_cache=True
+            "datetime.now", lambda x: datetime.now().strftime(x or "%m.%d.%Y_%H.%M.%S"), use_cache=True
+        )
+        OmegaConf.register_new_resolver(
+            "datetime.parse", lambda x: datetime.strptime(
+                x,
+                "%Y-%m-%dT%H:%M:%S%z"   
+            )
         )
     except Exception as e:
         print(e)
@@ -86,6 +92,8 @@ def open_config_structured(
 
     This allows for the config to contain functions
     """
+    create_custom_resolvers()
+
     c = OmegaConf.load(
         path,
     )
