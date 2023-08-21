@@ -31,14 +31,15 @@ def to_yaml(
     path: Path, config: Union[PipelineConfig, OptimizationConfig], resolve: bool
 ) -> None:
     """Save a config file"""
-    write_config = deepcopy(config)
+    write_config = OmegaConf.to_container(deepcopy(config), resolve=resolve)
     with open(path, "w") as f:
         # check if the dataclass field are None
-        for k, v in write_config.Blocks.items():
-            if v is None:
-                del write_config[k]
+        keys = list(write_config['Blocks'].keys())
+        for k in keys:
+            if write_config['Blocks'].get(k, None) is None:
+                del write_config['Blocks'][k]
 
-        f.write(OmegaConf.to_yaml(config, resolve=resolve))
+        f.write(OmegaConf.to_yaml(OmegaConf.create(write_config), resolve=resolve))
 
 
 def open_config(
@@ -46,8 +47,9 @@ def open_config(
     structured: OmegaConf = None,
 ) -> Union[PipelineConfig, OptimizationConfig]:
     """Open a config file and return a DictConfig object"""
+    create_custom_resolvers()
 
-    time_ = datetime.now().strftime("%m.%d.%Y_%H.%M.%S")
+    # time_ = datetime.now().strftime("%m.%d.%Y_%H.%M.%S")
 
     s = OmegaConf.structured(PipelineConfig) if structured is None else structured
     c = OmegaConf.load(
@@ -57,7 +59,7 @@ def open_config(
     merged = OmegaConf.merge(s, c)
 
     # handle the output directory
-    merged.Metadata.output = str(Path(merged.Metadata.output).joinpath(time_))
+    # merged.Metadata.output = str(Path(merged.Metadata.output).joinpath(time_))
     # create the output directory
     Path(merged.Metadata.output).mkdir(parents=True, exist_ok=True)
     # save the config file at the top level. Don't resolve the config file

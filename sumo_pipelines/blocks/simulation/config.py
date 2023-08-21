@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, List
+from typing import Any, Dict, List
 from dataclasses import dataclass, field
 
 import sumolib
@@ -20,6 +20,10 @@ class SimulationConfig:
     warmup_time: int = field(default=1800)
     make_cmd: Any = "${import:simulation.make_cmd}"
     start_time_rw: Any = None
+
+    # optional values for traci simulation
+    runner_function: Any = None
+    runner_function_config: Dict[str, Any] = field(default_factory=dict)
 
 
 

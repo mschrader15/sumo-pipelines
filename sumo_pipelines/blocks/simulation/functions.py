@@ -59,9 +59,11 @@ def run_sumo(config: SimulationConfig, parent_config: DictConfig) -> None:
         raise RuntimeError("Sumo failed to run")
 
 
-def online_traci(
+def run_sumo_function(
     config: SimulationConfig,
     parent_config: DictConfig,
 ) -> None:
-    # TODO: Implement this function!
-    raise NotImplementedError("Implement Me")
+    # call the runner function
+    config.runner_function(
+        parent_config
+    )    

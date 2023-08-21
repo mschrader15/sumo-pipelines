@@ -80,7 +80,7 @@ class Blocks:
 
 Blocks = make_dataclass(
     "Blocks",
-    [(config.__name__, Optional[config]) for config in get_blocks().values()],
+    [(config.__name__, Optional[config], None) for config in get_blocks().values()],
 )
 
 
