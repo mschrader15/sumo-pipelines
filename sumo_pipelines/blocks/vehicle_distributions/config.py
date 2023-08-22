@@ -21,6 +21,19 @@ class CFTableConfig:
     parameters: List = field(default_factory=list)
 
 
+
+@dataclass
+class ParamConfig:
+    """
+    This emulates on of the parameters in the SimpleCFConfig class
+    """
+    name: str
+    distribution: str = None
+    params: Dict = field(default_factory=lambda: {})
+    bounds: List = field(default_factory=list)
+
+
+
 @dataclass
 class SimpleCFConfig:
     """
@@ -28,5 +41,8 @@ class SimpleCFConfig:
     """
     save_path: str
     vehicle_distribution_name: str
-    cf_params: Dict = field(default_factory=lambda: {})
+    cf_params: Dict[str, ParamConfig] = field(default_factory=lambda: {})
+    number_of_samples: int = field(default=1)
     
+# @dataclass
+# class MultiLineConfig:

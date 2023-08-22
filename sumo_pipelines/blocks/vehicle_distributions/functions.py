@@ -135,3 +135,31 @@ def create_simple_distribution(
             f.write(v + "\n")
         f.write("</vTypeDistribution>")
 
+
+
+def create_simple_sampled_distribution(cf_config: SimpleCFConfig, config: DictConfig):
+    from sumolib.vehicletype import CreateVehTypeDistribution, VehAttribute
+
+
+    dist_creator = CreateVehTypeDistribution(
+        cf_config.seed,
+        cf_config.num_samples,
+        cf_config.name,
+        decimal_places=cf_config.decimal_places,
+    )
+
+    for k, v in cf_config.cf_params.items():
+        dist_creator.add_attribute(
+            VehAttribute(
+                name=k,
+                distribution=v.distribution,
+                distribution_params=v.params,
+                distribution_bounds=v.bounds,
+            )
+        )
+
+
+    # open an xml dom for writing at the save path
+    dist_creator.to_xml(
+        cf_config.save_path,
+    )

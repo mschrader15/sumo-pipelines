@@ -15,4 +15,13 @@ class FuelTotalConfig:
     diesel_filter: Any = field(default=None)
     x_filter: Any = field(default=None)
     y_filter: Any = field(default=None)
+
+
+
+@dataclass
+class TripInfoTotalFuelConfig:
+    input_file: str
+    val: float
+    time_low_filter: float = field(default=None)
+    tim_high_filter: float = field(default=None)
     

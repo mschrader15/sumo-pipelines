@@ -27,9 +27,6 @@ def update_output_file(config: XMLChangeOutputConfig, parent_config: DictConfig)
             file.write(filedata)
 
 
-
-
-
 def convert_xml_to_parquet(config: XMLConvertConfig, parent_config: DictConfig) -> None:
     """
     This function converts a sumo xml file to a parquet file using pyarrow.
