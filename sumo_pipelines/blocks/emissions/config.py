@@ -22,6 +22,6 @@ class FuelTotalConfig:
 class TripInfoTotalFuelConfig:
     input_file: str
     val: float
-    time_low_filter: float = field(default=None)
-    tim_high_filter: float = field(default=None)
+    time_low_filter: float = field(default=0)
+    time_high_filter: float = field(default=1e9)
     

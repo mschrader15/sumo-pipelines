@@ -186,21 +186,21 @@ def fast_tripinfo_fuel(config: TripInfoTotalFuelConfig, *args, **kwargs) -> None
     time_high_filter = config.time_high_filter
     time_low_filter = config.time_low_filter
 
-    with open(config.emissions_xml, "r") as file:
+    with open(config.input_file, "r") as file:
         # Memory-map the file
         mmapped_file = mmap.mmap(file.fileno(), 0, access=mmap.ACCESS_READ)
-        pattern = r'<tripinfo id=".+?" depart="(.+?)" .+? arrival="(.+?)" .+? fuel_abs="([^"]*)"'
+        pattern = r'<tripinfo id=".+?" depart="(.+?)" .+? arrival="(.+?)" .+?>\s*<emissions .+? fuel_abs="([^"]*)"'
         matches = re.findall(pattern, mmapped_file.read().decode("utf-8"))
 
     total_fuel = 0
     for match in matches:
-        depart_time = float(match[0])
-        arrival_time = float(match[1])
         fuel_abs = float(match[2])
 
         # add logic to check if both the arrival and departure and > than time low and < time high
         # if the tiem filters are none, skip the check and sum the total fuels
         if time_low_filter is not None and time_high_filter is not None:
+            depart_time = float(match[0])
+            arrival_time = float(match[1])
             if (
                 time_low_filter < depart_time < time_high_filter
                 and time_low_filter < arrival_time < time_high_filter
@@ -209,4 +209,4 @@ def fast_tripinfo_fuel(config: TripInfoTotalFuelConfig, *args, **kwargs) -> None
         else:
             total_fuel += fuel_abs
 
-    return total_fuel
+    config.val = total_fuel
