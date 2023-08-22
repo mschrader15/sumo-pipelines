@@ -152,6 +152,7 @@ def create_simple_sampled_distribution(cf_config: SimpleCFConfig, config: DictCo
         dist_creator.add_attribute(
             VehAttribute(
                 name=k,
+                
                 distribution=v.distribution,
                 distribution_params=v.params,
                 distribution_bounds=v.bounds,

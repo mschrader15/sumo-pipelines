@@ -72,6 +72,10 @@ def with_parameter_wrapper(
         kwargs = config.Optimization.ObjectiveWrapper.function(
             config.Optimization.ObjectiveWrapper.config, config
         )
+    
+    # resolve the Metadata
+    config.Metadata = OmegaConf.resolve(config.Metadata)
+    
     return tune.with_parameters(
         trainable, global_config=OmegaConf.to_container(config, resolve=False), **kwargs
     )
