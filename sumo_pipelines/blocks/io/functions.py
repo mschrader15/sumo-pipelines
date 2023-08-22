@@ -13,6 +13,7 @@ def save_config(config: SaveConfig, parent_config: OmegaConf) -> None:
         config (SaveConfig): The config file to save.
     """
     from sumo_pipelines.config import MetaData
+    
     local_config = deepcopy(parent_config)
     Path(config.save_path).parent.mkdir(parents=True, exist_ok=True)
     with open(config.save_path, "w") as f:
@@ -24,8 +25,10 @@ def save_config(config: SaveConfig, parent_config: OmegaConf) -> None:
         # pop blocks that we don't want to save
         keys = list(d['Blocks'].keys())
         for b in keys:
-            if isinstance(d['Blocks'][b], str):
+            if isinstance(d['Blocks'][b], str) or (d['Blocks'][b] is None):
                 d['Blocks'].pop(b)
+        
+        
         f.write(OmegaConf.to_yaml(OmegaConf.create(d), resolve=False))
 
 

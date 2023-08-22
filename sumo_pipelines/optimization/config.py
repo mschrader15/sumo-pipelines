@@ -41,6 +41,7 @@ class TunerConfig:
 class ObjectiveConfig:
     function: Any
     config: Dict[str, Any] = field(default_factory=dict)
+    additional_returns: Dict[str, Any] = field(default_factory=dict)
 
 @dataclass
 class ObjectiveWrapperConfig:

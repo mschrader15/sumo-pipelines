@@ -1,6 +1,6 @@
 from omegaconf import DictConfig
 
-from .config import CFTableConfig, SimpleCFConfig
+from .config import CFTableConfig, SimpleCFConfig, SampledSimpleCFConfig
 
 try:
     import pandas as pd
@@ -137,7 +137,7 @@ def create_simple_distribution(
 
 
 
-def create_simple_sampled_distribution(cf_config: SimpleCFConfig, config: DictConfig):
+def create_simple_sampled_distribution(cf_config: SampledSimpleCFConfig, config: DictConfig):
     from sumolib.vehicletype import CreateVehTypeDistribution, VehAttribute
 
 

@@ -59,6 +59,10 @@ def target_wrapper(
         if block is not None:
             execute_pipe_block(block, local_global_config)
 
+
+        if local_global_config.Optimization.ObjectiveFn.additional_returns:
+            res.update(local_global_config.Optimization.ObjectiveFn.additional_returns)
+
         return res
 
     return optimize_me
