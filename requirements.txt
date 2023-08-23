@@ -3,3 +3,4 @@ pandas
 sumolib
 omegaconf
 pyarrow
+polars

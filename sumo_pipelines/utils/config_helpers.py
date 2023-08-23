@@ -96,7 +96,7 @@ def open_config_structured(
     This allows for the config to contain functions
     """
     create_custom_resolvers()
-
+    
     c = OmegaConf.load(
         path,
     ) if isinstance(path, (Path, str)) else OmegaConf.merge(*[OmegaConf.load(p) for p in path])

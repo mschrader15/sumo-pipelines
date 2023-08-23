@@ -3,7 +3,7 @@ from typing import List, Union
 
 from sumo_pipelines.config import PipelineConfig
 
-from .utils.config_helpers import open_config, open_config_structured
+from .utils.config_helpers import open_config_structured
 from .pipe_handlers import create_consumers, recursive_producer
 
 try:
@@ -15,7 +15,7 @@ except ImportError:
     ray_exists = False
 
 
-def run_pipeline(config: Union[Path, List[Path], PipelineConfig], debug: bool) -> None:
+def run_pipeline(config: Union[Path, List[Path], PipelineConfig], debug: bool) -> PipelineConfig:
     """Run the pipeline"""
     #
     c = (
@@ -85,3 +85,5 @@ def run_pipeline(config: Union[Path, List[Path], PipelineConfig], debug: bool) -
                 ],
             )(c):
                 consumer(f)
+
+    return c

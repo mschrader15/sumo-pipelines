@@ -1,9 +1,13 @@
+from collections import namedtuple
 from pathlib import Path
+from typing import Generator, List
 from omegaconf import DictConfig
 import sumolib
 import pyarrow as pa
 import pyarrow.parquet as pq
 import re
+
+from traitlets import Any
 
 from .config import XMLConvertConfig, XMLChangeOutputConfig
 
@@ -27,6 +31,44 @@ def update_output_file(config: XMLChangeOutputConfig, parent_config: DictConfig)
             file.write(filedata)
 
 
+def _build_sumolib_parser(source, elements: List[dict]) -> Generator[namedtuple, Any, Any]:
+    
+    if len(elements) == 1:
+        yield from sumolib.xml.parse_fast(
+            source,
+            elements[0]["name"],
+            elements[0]["attributes"],
+            optional=True,
+        )
+    elif len(elements) == 2:
+        yield from sumolib.xml.parse_fast_nested(
+            source,
+            elements[0]["name"],
+            elements[0]["attributes"],
+            elements[1]["name"],
+            elements[1]["attributes"],
+            optional=True,
+        )
+       
+   
+def _build_decomposer(elements: List[dict], element_dict) -> callable:
+    
+    if len(elements) == 1:
+        def decompose(row):
+            for attr in elements[0].attributes:
+                element_dict[attr].append(getattr(row, attr))
+    elif len(elements) == 2:
+        def decompose(row):
+            for i in range(2):
+                for attr in elements[i].attributes:
+                    element_dict[attr].append(getattr(row[i], attr))
+    else:
+        raise ValueError("Only 1 or 2 elements are supported")
+    
+    return decompose
+            
+
+
 def convert_xml_to_parquet(config: XMLConvertConfig, parent_config: DictConfig) -> None:
     """
     This function converts a sumo xml file to a parquet file using pyarrow.
@@ -35,23 +77,14 @@ def convert_xml_to_parquet(config: XMLConvertConfig, parent_config: DictConfig) 
         config (XMLConvertConfig): The config file to save.
     """
     elements = {a: [] for element in config.elements for a in element.attributes}
+    
+    decomp_func = _build_decomposer(config.elements, elements)
 
-    for row in sumolib.xml.parse_fast_nested(
-        config.source,
-        config.elements[0]["name"],
-        config.elements[0]["attributes"],
-        config.elements[1]["name"],
-        config.elements[1]["attributes"],
-        optional=True,  
-    ):
-        for attr in config.elements[0].attributes:
-            elements[attr].append(getattr(row[0], attr))
-        
-        for attr in config.elements[1].attributes:
-            elements[attr].append(getattr(row[1], attr))
+    for row in _build_sumolib_parser(config.source, config.elements):
+        decomp_func(row)
 
     for k, v in elements.items():
-        elements[k] = pa.array(v, type=pa.string())
+        elements[k] = pa.array(v, )
 
     table = pa.Table.from_pydict(elements)
 

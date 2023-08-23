@@ -9,7 +9,7 @@ def read_requirements():
 
 setup(
     name="sumo-pipelines",
-    version="1.0.1",
+    version="1.1.1",
     packages=find_packages(),
     install_requires=read_requirements(),
 )
