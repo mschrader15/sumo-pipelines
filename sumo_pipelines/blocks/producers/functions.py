@@ -59,7 +59,6 @@ def generate_random_seed(
         yield new_conf
 
 
-
 def generate_iterator(
     config: IteratorConfig, 
     parent_config: DictConfig,
