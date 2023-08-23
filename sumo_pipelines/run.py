@@ -1,23 +1,31 @@
 from pathlib import Path
+from typing import List, Union
 
-from .utils.config_helpers import open_config
+from sumo_pipelines.config import PipelineConfig
+
+from .utils.config_helpers import open_config, open_config_structured
 from .pipe_handlers import create_consumers, recursive_producer
 
 try:
     import ray
-    # from ray.air import 
+
+    # from ray.air import
     ray_exists = True
 except ImportError:
     ray_exists = False
 
-def run_pipeline(config: Path, debug: bool) -> None:
+
+def run_pipeline(config: Union[Path, List[Path], PipelineConfig], debug: bool) -> None:
     """Run the pipeline"""
     #
-    c = open_config(
-        config,
+    c = (
+        open_config_structured(
+            config,
+            resolve_output=True,
+        )
+        if isinstance(config, (Path, str, list))
+        else config
     )
-
-    # c.Pipeline.build_pipeline()
 
     # create the consumer functions
     for k, pipeline in enumerate(c.Pipeline.pipeline):

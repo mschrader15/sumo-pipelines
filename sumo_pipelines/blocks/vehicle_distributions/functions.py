@@ -144,20 +144,27 @@ def create_simple_sampled_distribution(cf_config: SampledSimpleCFConfig, config:
     dist_creator = CreateVehTypeDistribution(
         cf_config.seed,
         cf_config.num_samples,
-        cf_config.name,
+        cf_config.vehicle_distribution_name,
         decimal_places=cf_config.decimal_places,
     )
 
     for k, v in cf_config.cf_params.items():
-        dist_creator.add_attribute(
-            VehAttribute(
-                name=k,
-                
-                distribution=v.distribution,
-                distribution_params=v.params,
-                distribution_bounds=v.bounds,
+        if v.is_attr:
+            dist_creator.add_attribute(
+                VehAttribute(
+                    name=k,
+                    attribute_value=str(v.val)
+                )
             )
-        )
+        else:
+            dist_creator.add_attribute(
+                VehAttribute(
+                    name=k,
+                    distribution=v.distribution,
+                    distribution_params=v.params,
+                    bounds=v.bounds, 
+                )
+            )
 
 
     # open an xml dom for writing at the save path

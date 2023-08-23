@@ -1,4 +1,4 @@
-from typing import Any, List, Dict
+from typing import Any, List, Dict, Optional, Union
 from dataclasses import dataclass, field
 
 
@@ -38,10 +38,11 @@ class ParamConfig:
     """
     This emulates on of the parameters in the SimpleCFConfig class
     """
-    name: str
     distribution: str = field(default="uniform")
-    params: Dict = field(default_factory=lambda: {})
+    params: Dict[str, float] = field(default_factory=dict)
     bounds: List = field(default_factory=list)
+    val: Optional[Any] = field(default=None)
+    is_attr: bool = False
 
 
 
@@ -50,8 +51,9 @@ class SampledSimpleCFConfig(SimpleCFConfig):
     """
     This class is custom to our use case. It is used to sample parameters from a table
     """
-    cf_params: Dict[str, ParamConfig] = field(default_factory=lambda: {})
+    seed: int = field(default=42)
+    decimal_places: int = field(default=3)
+    num_samples: int = field(default=100)
+    cf_params: Dict[str, ParamConfig] = field(default_factory=dict)
     
     
-# @dataclass
-# class MultiLineConfig:

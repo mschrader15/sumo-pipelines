@@ -81,11 +81,17 @@ def create_consumers(
     Returns:
         Union[Callable, object]: A consumer
     """
+    from sumo_pipelines.utils.config_helpers import create_custom_resolvers
+    
+    
     func = [
         (load_function(function), dotpath) for function, dotpath in function_n_configs
     ]
 
     def consumer(main_config):
+        
+        create_custom_resolvers()
+        
         for f, dotpath in func:
             f(OmegaConf.select(main_config, dotpath), main_config)
 

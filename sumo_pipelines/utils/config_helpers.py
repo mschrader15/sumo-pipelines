@@ -1,7 +1,7 @@
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
-from typing import Union
+from typing import List, Union
 
 from omegaconf import OmegaConf, SCMode
 
@@ -87,7 +87,8 @@ def open_completed_config(
 
 
 def open_config_structured(
-    path: Path, resolve: bool = False
+    path: Union[Path, List[Path]], 
+    resolve_output: bool = False,
 ) -> Union[PipelineConfig, OptimizationConfig]:
     """
     Open a config file and return the underlying dataclass representation.
@@ -98,7 +99,7 @@ def open_config_structured(
 
     c = OmegaConf.load(
         path,
-    )
+    ) if isinstance(path, (Path, str)) else OmegaConf.merge(*[OmegaConf.load(p) for p in path])
 
     if c.get("Optimization", None) is not None:
         s = OmegaConf.structured(OptimizationConfig)
@@ -108,4 +109,9 @@ def open_config_structured(
         )
     # merge the structured config with the loaded config
     c = OmegaConf.merge(s, c)
+
+    # if resolve metadata
+    if resolve_output:
+        c.Metadata.output = str(c.Metadata.output)
+    
     return c

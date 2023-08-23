@@ -45,7 +45,9 @@ def run_sumo(config: SimulationConfig, parent_config: DictConfig) -> None:
         config (SimulationConfig): The configuration for the simulation.
     """
 
-    sumo_cmd = config.make_cmd()
+    sumo_cmd = config.make_cmd(
+        config
+    )
 
     if config.simulation_output:
         with open(config.simulation_output, "w") as f:
