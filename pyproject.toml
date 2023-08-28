@@ -1,7 +1,17 @@
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
 
 [project]
 name = "sumo-pipelines"
 version = "1.1.1"
+urls = { homepage = "https://github.com/mschrader15/sumo-pipelines" }
+
+[tool.maturin]
+python-source = "python"
+manifest-path = "crates/sumo-pipelines-rs/Cargo.toml"
+module-name = "sumo_pipelines.sumo_pipelines_rs"
+
+[project.scripts]
+sumo-pipe = "sumo_pipelines.execute:main"
+sumo-calibrate = "sumo_pipelines.execute:optimize"
