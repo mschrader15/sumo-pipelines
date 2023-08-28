@@ -2,7 +2,11 @@ import mmap
 from pathlib import Path
 import re
 
-from .config import FuelTotalConfig, TripInfoTotalFuelConfig
+from .config import (
+    EmissionsTableFuelTotalConfig,
+    FuelTotalConfig,
+    TripInfoTotalFuelConfig,
+)
 
 SUMO_DIESEL_GRAM_TO_JOULE: float = 42.8e-3
 SUMO_GASOLINE_GRAM_TO_JOULE: float = 43.4e-3
@@ -210,3 +214,15 @@ def fast_tripinfo_fuel(config: TripInfoTotalFuelConfig, *args, **kwargs) -> None
             total_fuel += fuel_abs
 
     config.val = total_fuel
+
+
+def emissions_table_to_total(
+    config: EmissionsTableFuelTotalConfig, *args, **kwargs
+) -> None:
+    import polars as pl
+
+    df = pl.read_parquet(config.input_file).filter(
+        pl.col("time").between(config.time_low_filter, config.time_high_filter)
+    )
+
+    df.with_column(pl.col("fuel") * config.sim_step)

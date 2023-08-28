@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Any
 
+from omegaconf import MISSING
+
 
 @dataclass
 class FuelTotalConfig:
@@ -17,6 +19,16 @@ class FuelTotalConfig:
     y_filter: Any = field(default=None)
 
 
+@dataclass
+class EmissionsTableFuelTotalConfig:
+    input_file: str
+    sim_step: Any = field(default="${Blocks.SimulationConfig.step_length}")
+    total_fuel: float = MISSING
+    avg_fuel: float = MISSING
+    num_vehicles: int = MISSING
+    time_low_filter: float = field(default=0)
+    time_high_filter: float = field(default=1e9)
+    
 
 @dataclass
 class TripInfoTotalFuelConfig:

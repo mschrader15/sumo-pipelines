@@ -29,3 +29,10 @@ class XMLChangeConfig:
 @dataclass
 class XMLChangeOutputConfig:
     changes: List[XMLChangeConfig]
+    
+    
+@dataclass
+class EmissionXMLtoParquetConfig:
+    input_file: str
+    output_file: str
+    remove_input: bool = field(default=False)

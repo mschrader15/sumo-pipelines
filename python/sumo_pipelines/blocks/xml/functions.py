@@ -9,30 +9,35 @@ import re
 
 from traitlets import Any
 
-from .config import XMLConvertConfig, XMLChangeOutputConfig
+from .config import EmissionXMLtoParquetConfig, XMLConvertConfig, XMLChangeOutputConfig
+
+from sumo_pipelines.sumo_pipelines_rs import parse_emissions_xml
 
 
-def update_output_file(config: XMLChangeOutputConfig, parent_config: DictConfig) -> None:
+def update_output_file(
+    config: XMLChangeOutputConfig, parent_config: DictConfig
+) -> None:
     """
-    This function takes an xml file that has an output path (like SUMO's detector files), 
+    This function takes an xml file that has an output path (like SUMO's detector files),
     and changes the target output destination to the target path.
 
     """
-    for change in config.changes:    
+    for change in config.changes:
         # Open the xml file
-        with open(change.source, 'r') as file:
+        with open(change.source, "r") as file:
             filedata = file.read()
 
         # Replace the target output destination
         filedata = re.sub(r'file="([^"]*)"', f'file="{change.new_output}"', filedata)
 
         # Write the file out again
-        with open(change.target, 'w') as file:
+        with open(change.target, "w") as file:
             file.write(filedata)
 
 
-def _build_sumolib_parser(source, elements: List[dict]) -> Generator[namedtuple, Any, Any]:
-    
+def _build_sumolib_parser(
+    source, elements: List[dict]
+) -> Generator[namedtuple, Any, Any]:
     if len(elements) == 1:
         yield from sumolib.xml.parse_fast(
             source,
@@ -49,24 +54,26 @@ def _build_sumolib_parser(source, elements: List[dict]) -> Generator[namedtuple,
             elements[1]["attributes"],
             optional=True,
         )
-       
-   
+
+
 def _build_decomposer(elements: List[dict], element_dict) -> callable:
-    
     if len(elements) == 1:
+
         def decompose(row):
             for attr in elements[0].attributes:
                 element_dict[attr].append(getattr(row, attr))
+
     elif len(elements) == 2:
+
         def decompose(row):
             for i in range(2):
                 for attr in elements[i].attributes:
                     element_dict[attr].append(getattr(row[i], attr))
+
     else:
         raise ValueError("Only 1 or 2 elements are supported")
-    
+
     return decompose
-            
 
 
 def convert_xml_to_parquet(config: XMLConvertConfig, parent_config: DictConfig) -> None:
@@ -77,14 +84,16 @@ def convert_xml_to_parquet(config: XMLConvertConfig, parent_config: DictConfig) 
         config (XMLConvertConfig): The config file to save.
     """
     elements = {a: [] for element in config.elements for a in element.attributes}
-    
+
     decomp_func = _build_decomposer(config.elements, elements)
 
     for row in _build_sumolib_parser(config.source, config.elements):
         decomp_func(row)
 
     for k, v in elements.items():
-        elements[k] = pa.array(v, )
+        elements[k] = pa.array(
+            v,
+        )
 
     table = pa.Table.from_pydict(elements)
 
@@ -110,5 +119,20 @@ def convert_xml_to_parquet_pandas(config: XMLConvertConfig, *args, **kwargs) -> 
     # remove the source file
     if config.delete_source:
         Path(config.source).unlink()
-    
 
+
+def convert_emissions_xml_to_parquet(
+    config: EmissionXMLtoParquetConfig, *args, **kwargs
+) -> None:
+    parse_emissions_xml(config.input_file, config.output_file)
+
+    if config.remove_input:
+        Path(config.input_file).unlink()
+
+
+# if __name__ == "__main__":
+
+#     convert_emissions_xml_to_parquet(
+#         EmissionXMLtoParquetConfig(
+#             input_file=
+#     )
