@@ -24,7 +24,7 @@ class EmissionsTableFuelTotalConfig:
     input_file: str
     sim_step: Any = field(default="${Blocks.SimulationConfig.step_length}")
     total_fuel: float = MISSING
-    avg_fuel: float = MISSING
+    total_distance: float = MISSING
     num_vehicles: int = MISSING
     time_low_filter: float = field(default=0)
     time_high_filter: float = field(default=1e9)
