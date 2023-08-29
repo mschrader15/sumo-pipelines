@@ -11,6 +11,7 @@ urls = { homepage = "https://github.com/mschrader15/sumo-pipelines" }
 python-source = "python"
 manifest-path = "crates/sumo-pipelines-rs/Cargo.toml"
 module-name = "sumo_pipelines.sumo_pipelines_rs"
+sdist-include = ["README.md"]
 
 [project.scripts]
 sumo-pipe = "sumo_pipelines.execute:main"
