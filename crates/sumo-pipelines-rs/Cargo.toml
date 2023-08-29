@@ -6,12 +6,16 @@ edition = "2021"
 
 [lib]
 name = "sumo_pipelines_rs"
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 
 [dependencies]
 polars = { version = "0.32.1", features = ["parquet"] }
 pyo3 = {version = "0.19.0", features = ["extension-module"]}
 quick-xml = { version = "0.30.0", features = ["serialize"] }
+regex = "1.9.4"
 serde = { version = "1.0.188", features = ["derive"] }
 
+[features]
+extension-module = ["pyo3/extension-module"]
+default = ["extension-module"]

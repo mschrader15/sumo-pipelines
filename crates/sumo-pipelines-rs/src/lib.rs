@@ -3,12 +3,12 @@
 pub mod xml_parsing;
 
 use pyo3::{PyResult, types::PyModule, pymodule, wrap_pyfunction, Python, pyfunction};
-use xml_parsing::emissions::parse_xml_to_df;
+use xml_parsing::emissions::{parse_xml_raw};
 
 
 #[pyfunction]
 fn parse_emissions_xml(file_path: &str, output_path: &str) -> PyResult<()> {
-    parse_xml_to_df(file_path, output_path).unwrap();
+    parse_xml_raw(file_path, output_path).unwrap();
     Ok(())
 }
 
@@ -30,6 +30,7 @@ mod tests {
     fn test_parse_emissions_xml_to_df() {
         parse_emissions_xml("tests/test_data/emissions.xml", "tests/test_data/emissions.parquet").unwrap();
     }
+
 }
 
 

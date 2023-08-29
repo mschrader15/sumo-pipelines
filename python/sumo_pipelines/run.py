@@ -36,9 +36,9 @@ def run_pipeline(config: Union[Path, List[Path], PipelineConfig], debug: bool) -
                     "Ray is not installed, but is required for parallel processing"
                 )
             if ray.is_initialized():
-                ray.init(address="auto")
+                ray.init(address="auto", num_cpus=pipeline.number_of_workers)
             else:
-                ray.init(local_mode=debug)
+                ray.init(local_mode=debug, num_cpus=pipeline.number_of_workers)
 
             consumer = create_consumers(
                 [
