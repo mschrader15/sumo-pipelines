@@ -30,9 +30,16 @@ def load_function(function: str) -> Callable:
                 ("sumo_pipelines", *((function).split(".")[:-1]))
             )
         ).__dict__[function.split(".")[-1]]
-    return importlib.import_module(
-        f"sumo_pipelines.blocks.{function.split('.')[0]}.functions"
-    ).__dict__[function.split(".")[-1]]
+    try:
+        return importlib.import_module(
+            f"sumo_pipelines.blocks.{function.split('.')[0]}.functions"
+        ).__dict__[function.split(".")[-1]]
+    except ModuleNotFoundError:
+        return importlib.import_module(
+            ".".join(
+                ("sumo_pipelines", *((function).split(".")[:-1]))
+            )
+        ).__dict__[function.split(".")[-1]]
 
 
 def recursive_producer(producers: List[Tuple[str, List[str]]]) -> callable:
@@ -88,14 +95,24 @@ def create_consumers(
         (load_function(function), dotpath) for function, dotpath in function_n_configs
     ]
 
-    def consumer(main_config):
+    if parallel:
+        @ray.remote(num_cpus=1)
+        def consumer(main_config):
+            
+            create_custom_resolvers()
+            
+            for f, dotpath in func:
+                f(OmegaConf.select(main_config, dotpath), main_config)
+    else:
+        def consumer(main_config):
+            
+            create_custom_resolvers()
+            
+            for f, dotpath in func:
+                f(OmegaConf.select(main_config, dotpath), main_config)
         
-        create_custom_resolvers()
-        
-        for f, dotpath in func:
-            f(OmegaConf.select(main_config, dotpath), main_config)
 
-    return ray.remote(consumer) if parallel else consumer
+    return consumer
 
 
 def get_pipeline_by_name(config: Pipeline, name: str) -> Tuple[PipeBlock, str]:
