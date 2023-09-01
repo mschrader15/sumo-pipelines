@@ -1,23 +1,22 @@
-use core::f64;
 use arrow2::{
     array::{Array, Float64Array, Utf8Array},
     chunk::Chunk,
     // error::Result,
-    datatypes::{DataType, Field, Schema,},
+    datatypes::{DataType, Field, Schema},
     io::parquet::write::{
         transverse, CompressionOptions, Encoding, FileWriter, RowGroupIterator, Version,
         WriteOptions,
     },
 };
+use core::f64;
 use std::{
     fs::{self},
-    io::{BufRead, BufReader},
+    io::{BufRead, BufReader, Read},
     net::{TcpListener, TcpStream},
     path::Path,
 };
 
 const MAX_ROWS_PER_FILE: usize = 500_000;
-
 
 #[derive(Debug, Clone, Default)]
 pub struct TimeItem {
@@ -278,45 +277,36 @@ fn handle_client(
     re_vehicle: &regex::Regex,
     re_time: &regex::Regex,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // let mut buffer: Vec<u8>  = Vec::new() ;
     let mut reader = BufReader::new(stream);
     let mut timestep = 0.0;
     let mut timestep_vec: Vec<TimeItem> = Vec::new();
-    let mut ending = false;
+    let mut buf = String::new();
 
-    loop {
-        let buffer_len: usize;
-
-        // additional scope to limit the lifetime of the borrow
-        {
-            // reader.read_until(0x0A, &mut buffer)?;
-            let buffer = reader.fill_buf().unwrap();
-
-            let buffer_decoded = String::from_utf8_lossy(&buffer).to_string();
-
-            if buffer_decoded.contains("</emission-export>") | (buffer.len() == 0) {
-                ending = true;
-            }
-
-            re_time.captures_iter(&buffer_decoded).for_each(|c| {
+    while let Ok(_) = reader.read_line(&mut buf) {
+        match re_time.captures(&buf) {
+            Some(c) => {
                 timestep = c[1].parse::<f64>().unwrap();
-            });
-
-            re_vehicle.captures_iter(&buffer_decoded).for_each(|v| {
-                make_vehicle(&mut timestep_vec, timestep, v);
-            });
-
-            writer.write(&timestep_vec, false)?;
-            timestep_vec.clear();
-            buffer_len = buffer.len();
+            }
+            None => match re_vehicle.captures(&buf) {
+                Some(v) => {
+                    make_vehicle(&mut timestep_vec, timestep, v);
+                    if &timestep_vec.len() >= &MAX_ROWS_PER_FILE {
+                        let _ = writer.write(&timestep_vec, false).unwrap();
+                        timestep_vec.clear();
+                    }
+                }
+                None => match &buf.find("</emission-export>") {
+                    Some(_) => break,
+                    _ => {}
+                },
+            },
         }
+        buf.clear()
+    }
 
-        // buffer.clear();
-        reader.consume(buffer_len);
-
-        if ending {
-            break;
-        }
+    if timestep_vec.len() > 0 {
+        let _ = writer.write(&timestep_vec, false).unwrap();
+        timestep_vec.clear();
     }
 
     Ok(())
@@ -329,11 +319,14 @@ pub fn socket_emissions(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let re_vehicle: regex::Regex = regex::Regex::new(r#"id="([^"]*)" eclass="([^"]*)" CO2="([^"]*)" CO="([^"]*)" HC="([^"]*)" NOx="([^"]*)" PMx="([^"]*)" fuel="([^"]*)" electricity="([^"]*)" noise="([^"]*)" route="([^"]*)" type="([^"]*)" waiting="([^"]*)" lane="([^"]*)" pos="([^"]*)" speed="([^"]*)" angle="([^"]*)" x="([^"]*)" y="([^"]*)""#).unwrap();
     let re_time: regex::Regex = regex::Regex::new(r#"<timestep time="([^"]*)""#).unwrap();
+    // let re_time_end: regex::Regex = regex::Regex::new(r#"</timestep>"#).unwrap();
 
     let listener = TcpListener::bind(socket_string)?;
 
     // make a file writer
     let mut writer = CustomFileWriter::new(Path::new(output_path), output_base_name);
+
+    let buffer_size = 1024 * 1024 * 10;
 
     // for stream in listener.incoming() {
     let (stream, _) = listener.accept()?;
@@ -342,9 +335,11 @@ pub fn socket_emissions(
     Ok(())
 }
 
-
-pub fn parse_xml_raw(file_path: &str, output_path: &str, output_base_name: &str,) -> Result<(), Box<dyn std::error::Error>> {
-
+pub fn parse_xml_raw(
+    file_path: &str,
+    output_path: &str,
+    output_base_name: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
     let file_str = std::fs::read_to_string(file_path)?;
 
     let re_time = regex::Regex::new(r#"<timestep time="(\d+\.\d+)""#).unwrap();
@@ -381,13 +376,11 @@ pub fn parse_xml_raw(file_path: &str, output_path: &str, output_base_name: &str,
     let _ = writer.write(&timestep_vec, true).unwrap();
 
     Ok(())
-
-   
 }
 
 fn make_vehicle(timestep_vec: &mut Vec<TimeItem>, timestep: f64, v: regex::Captures<'_>) {
     timestep_vec.push(TimeItem {
-        timestep: timestep,
+        timestep,
         id: v[1].to_owned(),
         eclass: v[2].to_owned(),
         co2: v[3].parse::<f64>().unwrap(),
@@ -409,7 +402,6 @@ fn make_vehicle(timestep_vec: &mut Vec<TimeItem>, timestep: f64, v: regex::Captu
         y: v[19].parse::<f64>().unwrap(),
     })
 }
-
 
 #[cfg(test)]
 mod tests {
