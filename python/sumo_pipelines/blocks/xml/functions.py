@@ -1,17 +1,17 @@
 from collections import namedtuple
 from pathlib import Path
-from typing import Generator, List
+from typing import Generator, List, Any
 from omegaconf import DictConfig
 import sumolib
 import pyarrow as pa
 import pyarrow.parquet as pq
 import re
 
-from traitlets import Any
 
-from .config import EmissionXMLtoParquetConfig, XMLConvertConfig, XMLChangeOutputConfig
+from .config import EmissionXMLtoParquetConfig, XMLConvertConfig, XMLChangeOutputConfig, XMLSimpleRegexConfig
 
 from sumo_pipelines.sumo_pipelines_rs import parse_emissions_xml
+
 
 
 def update_output_file(
@@ -33,6 +33,25 @@ def update_output_file(
         # Write the file out again
         with open(change.target, "w") as file:
             file.write(filedata)
+
+
+
+def simple_regex_update(
+        config: XMLSimpleRegexConfig, 
+        *args,
+        **kwargs
+) -> None:
+    
+    with open(config.source, "r") as file:
+        filedata = file.read()
+
+    # Replace the target output destination
+    filedata = re.sub(config.regex, config.replace, filedata)
+
+    # Write the file out again
+    with open(config.target, "w") as file:
+        file.write(filedata)
+
 
 
 def _build_sumolib_parser(

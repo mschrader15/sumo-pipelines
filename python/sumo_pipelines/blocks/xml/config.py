@@ -20,6 +20,14 @@ class XMLConvertConfig:
 
 
 @dataclass
+class XMLSimpleRegexConfig:
+    source: str
+    target: str
+    regex: str
+    replace: str
+
+
+@dataclass
 class XMLChangeConfig:
     source: str
     target: str
