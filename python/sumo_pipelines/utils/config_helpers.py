@@ -25,7 +25,10 @@ def create_custom_resolvers():
             "datetime.parse", lambda x: datetime.strptime(x, "%Y-%m-%dT%H:%M:%S%z")
         )
     except Exception as e:
-        print(e)
+        if "already registered" in str(e):
+            pass
+        else:
+            raise e
 
 
 def to_yaml(
@@ -75,6 +78,10 @@ def open_completed_config(
     path: Path, validate: bool = True
 ) -> Union[PipelineConfig, OptimizationConfig]:
     """Open a config file and return a DictConfig object"""
+    try:
+        create_custom_resolvers()
+    except Exception as e:
+        pass
 
     with open(path, "r") as f:
         c = OmegaConf.load(
