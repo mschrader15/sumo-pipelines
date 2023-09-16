@@ -48,12 +48,22 @@ class ParamConfig:
 
 @dataclass
 class SampledSimpleCFConfig(SimpleCFConfig):
-    """
-    This class is custom to our use case. It is used to sample parameters from a table
-    """
     seed: int = field(default=42)
     decimal_places: int = field(default=3)
     num_samples: int = field(default=100)
     cf_params: Dict[str, ParamConfig] = field(default_factory=dict)
     
+    
+    
+@dataclass
+class MultiTypeCFConfig:    
+    configs: List[SampledSimpleCFConfig]
+    
+    
+    
+@dataclass
+class MergeVehDistributions:
+    output_path: str
+    files: List[str] = field(default_factory=list)
+    distribution_name: str = field(default="vehDist")
     

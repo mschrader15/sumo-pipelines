@@ -12,6 +12,12 @@ from sumo_pipelines.pipe_handlers import load_function
 
 
 def create_custom_resolvers():
+    
+    def update_parent_from_yaml(p, *, __parent__):
+        c = OmegaConf.load(p)
+        __parent__.update(c)
+        
+    
     try:
         OmegaConf.register_new_resolver(
             "import", lambda x: load_function(x), use_cache=True
@@ -23,6 +29,9 @@ def create_custom_resolvers():
         )
         OmegaConf.register_new_resolver(
             "datetime.parse", lambda x: datetime.strptime(x, "%Y-%m-%dT%H:%M:%S%z")
+        )
+        OmegaConf.register_new_resolver(
+            "yaml.update", update_parent_from_yaml, use_cache=True
         )
     except Exception as e:
         if "already registered" in str(e):

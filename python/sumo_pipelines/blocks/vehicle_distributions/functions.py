@@ -1,6 +1,6 @@
 from omegaconf import DictConfig
 
-from .config import CFTableConfig, SimpleCFConfig, SampledSimpleCFConfig
+from .config import CFTableConfig, MergeVehDistributions, SimpleCFConfig, SampledSimpleCFConfig
 
 try:
     import pandas as pd
@@ -171,3 +171,49 @@ def create_simple_sampled_distribution(cf_config: SampledSimpleCFConfig, config:
     dist_creator.to_xml(
         cf_config.save_path,
     )
+    
+    
+
+def merge_veh_distributions(
+    config: MergeVehDistributions,
+    *args,
+    **kwargs,    
+) -> None:
+    # from lxml
+    from lxml import etree as ET
+    # make a new XML doc
+    doc = ET.ElementTree(ET.fromstring("<additional/>"))
+    root = doc.getroot()
+    dist = ET.Element("vTypeDistribution", attrib={"id": config.distribution_name})
+    
+    all_vtypes = []
+    for file_ in config.files:
+        tree = ET.parse(file_)
+        all_vtypes.extend(tree.findall(".//vTypeDistribution/*"))
+    dist.extend(all_vtypes)
+    root.append(dist)
+    
+    # save the file
+    doc.write(config.output_path, pretty_print=True)
+    
+    
+def update_veh_distribution(
+    cf_config: MergeVehDistributions,
+    config: DictConfig,
+) -> None:
+    # read in the vtype distribution
+    try:
+        import pandas as pd
+    except ImportError:
+        raise ImportError("pandas is not installed. Please install it to use this block.")
+    # using pandas for this is :shrug: but I have it as a dependency already 
+    # so whatever
+    
+    df = pd.read_xml(
+        cf_config.save_path,
+        xpath="vTypeDistribution/vType",
+    )
+    
+    # update the 
+    
+    
