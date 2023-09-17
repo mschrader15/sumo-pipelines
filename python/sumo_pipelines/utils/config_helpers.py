@@ -1,9 +1,11 @@
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
+import random
+import sys
 from typing import List, Union
 
-from omegaconf import OmegaConf, SCMode
+from omegaconf import OmegaConf, SCMode, DictConfig, ListConfig
 
 
 from sumo_pipelines.config import PipelineConfig
@@ -11,12 +13,34 @@ from sumo_pipelines.optimization.config import OptimizationConfig
 from sumo_pipelines.pipe_handlers import load_function
 
 
+import re
+
+# Kept outside simple_eval() just for performance
+_re_simple_eval = re.compile(rb'd([\x00-\xFF]+)S\x00')
+
+def simple_eval(expr):
+    try:
+        c = compile(expr, 'userinput', 'eval')
+    except SyntaxError as e:
+        raise ValueError(f"Malformed expression: {expr}") from e
+    m = _re_simple_eval.fullmatch(c.co_code)
+    if not m:
+        raise ValueError(f"Not a simple algebraic expression: {expr}")
+    try:
+        return c.co_consts[int.from_bytes(m.group(1), sys.byteorder)]
+    except IndexError as exc:
+        raise ValueError(f"Expression not evaluated as constant: {expr}") from exc
+
+
+def update_parent_from_yaml(p, *, _parent_: DictConfig):
+        c = OmegaConf.load(p)
+        _parent_.update(c)
+
+        # specian key to load a yaml
+        del _parent_["yaml"]
+
 def create_custom_resolvers():
     
-    def update_parent_from_yaml(p, *, __parent__):
-        c = OmegaConf.load(p)
-        __parent__.update(c)
-        
     
     try:
         OmegaConf.register_new_resolver(
@@ -30,9 +54,24 @@ def create_custom_resolvers():
         OmegaConf.register_new_resolver(
             "datetime.parse", lambda x: datetime.strptime(x, "%Y-%m-%dT%H:%M:%S%z")
         )
+
         OmegaConf.register_new_resolver(
-            "yaml.update", update_parent_from_yaml, use_cache=True
+            "randint", 
+            lambda x, y: random.randint(x, y),
+            use_cache=True,
         )
+
+        OmegaConf.register_new_resolver(
+            "uniform", 
+            lambda x, y: random.uniform(x, y),
+            use_cache=True,
+        )
+
+        OmegaConf.register_new_resolver(
+            "math", 
+            lambda x: simple_eval(x),  # this is dangerous. How to make it safe?
+        )
+        
     except Exception as e:
         if "already registered" in str(e):
             pass
@@ -103,6 +142,34 @@ def open_completed_config(
     return OmegaConf.merge(s, c)
 
 
+def resolve_yaml_imports(cfg: DictConfig,):
+    # if OmegaConf.has_resolver(cfg, "yaml.update"):
+    try:
+        OmegaConf.resolve(cfg)
+    except Exception as e:
+        pass
+    
+
+
+def walk_config(cfg: DictConfig, func):
+    """Walk the config and apply a function to each node"""
+    if isinstance(cfg, DictConfig):
+        for k in cfg.keys():
+            try:
+                walk_config(cfg[k], func)
+            except Exception as e:
+                pass
+    elif isinstance(cfg, ListConfig):
+        for i in range(len(cfg)):
+            try:
+                walk_config(cfg[i], func)
+            except Exception as e:
+                pass
+    else:
+        func(cfg)
+
+
+
 def open_config_structured(
     path: Union[Path, List[Path]],
     resolve_output: bool = False,
@@ -112,7 +179,11 @@ def open_config_structured(
 
     This allows for the config to contain functions
     """
-    create_custom_resolvers()
+    
+
+    OmegaConf.register_new_resolver(
+            "yaml.update", update_parent_from_yaml, 
+        )
 
     if isinstance(path, list):
         all_confs = [OmegaConf.load(p) for p in path]
@@ -159,6 +230,14 @@ def open_config_structured(
         c = OmegaConf.load(
             path,
         )
+
+    random.seed(c.Metadata.random_seed)
+
+    # resolve what I can
+    walk_config(c, resolve_yaml_imports)
+    
+    # register the other resolvers
+    create_custom_resolvers()
 
     if c.get("Optimization", None) is not None:
         s = OmegaConf.structured(OptimizationConfig)

@@ -50,7 +50,7 @@ class ParamConfig:
 class SampledSimpleCFConfig(SimpleCFConfig):
     seed: int = field(default=42)
     decimal_places: int = field(default=3)
-    num_samples: int = field(default=100)
+    num_samples: Any = field(default=100)
     cf_params: Dict[str, ParamConfig] = field(default_factory=dict)
     
     
@@ -58,12 +58,30 @@ class SampledSimpleCFConfig(SimpleCFConfig):
 @dataclass
 class MultiTypeCFConfig:    
     configs: List[SampledSimpleCFConfig]
+    save_path: str
+    distribution_name: str = field(default="vehDist")
     
     
     
 @dataclass
-class MergeVehDistributions:
+class MergeVehDistributionsConfig:
     output_path: str
     files: List[str] = field(default_factory=list)
     distribution_name: str = field(default="vehDist")
     
+
+
+@dataclass
+class CFParamItem:
+
+    name: str
+    value: Union[str, float, int]
+    percent: Optional[float] = None
+    filters: Any = field(default_factory=list)
+
+
+@dataclass
+class CFAddParamsConfig:
+    input_file: str
+    save_path: str
+    params: Any

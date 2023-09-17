@@ -1,6 +1,14 @@
+from typing import List
 from omegaconf import DictConfig
 
-from .config import CFTableConfig, MergeVehDistributions, SimpleCFConfig, SampledSimpleCFConfig
+from .config import (
+    CFTableConfig,
+    MergeVehDistributionsConfig,
+    MultiTypeCFConfig,
+    SimpleCFConfig,
+    SampledSimpleCFConfig,
+    CFAddParamsConfig
+)
 
 try:
     import pandas as pd
@@ -31,9 +39,7 @@ def create_distribution_pandas(
         DUMB_OBJECT_STORE[cf_config.table] = samples
 
     samples = samples.rename(columns=cf_config.cf_params).sample(
-        cf_config.num_samples,
-        random_state=cf_config.seed,
-        replace=True
+        cf_config.num_samples, random_state=cf_config.seed, replace=True
     )
     # add the vehicle type
     vehicles = []
@@ -49,7 +55,12 @@ def create_distribution_pandas(
             f'\t<vType id="{cf_config.vehicle_distribution_name}_{i}" '
             + " ".join(['{}="{}"'.format(k, str(v)) for k, v in row.items()])
             + " "
-            + " ".join(['{}="{}"'.format(k, str(v)) for k, v in cf_config.additional_params.items()])
+            + " ".join(
+                [
+                    '{}="{}"'.format(k, str(v))
+                    for k, v in cf_config.additional_params.items()
+                ]
+            )
             + "/>"
         )
         i += 1
@@ -61,7 +72,6 @@ def create_distribution_pandas(
         for v in vehicles:
             f.write(v + "\n")
         f.write("</vTypeDistribution>")
-
 
 
 def create_independent_distribution_pandas(
@@ -85,25 +95,19 @@ def create_independent_distribution_pandas(
     # add the vehicle type
 
     sampled_params = {
-        col: samples[col].sample(
-           cf_config.num_samples,
-            random_state=cf_config.seed
-        ) for col in samples.columns
+        col: samples[col].sample(cf_config.num_samples, random_state=cf_config.seed)
+        for col in samples.columns
     }
 
     vehicles = [
         (
             (
                 f'\t<vType id="{cf_config.vehicle_distribution_name}_{i}" '
-                + " ".join(
-                    [f'{k}="{str(v[i])}"' for k, v in sampled_params.items()]
-                )
+                + " ".join([f'{k}="{str(v[i])}"' for k, v in sampled_params.items()])
             )
             + " "
         )
-        + " ".join(
-            [f'{k}="{str(v)}"' for k, v in cf_config.additional_params.items()]
-        )
+        + " ".join([f'{k}="{str(v)}"' for k, v in cf_config.additional_params.items()])
         + "/>"
         for i in range(cf_config.num_samples)
     ]
@@ -115,18 +119,14 @@ def create_independent_distribution_pandas(
         f.write("</vTypeDistribution>")
 
 
-
 def create_simple_distribution(
     cf_config: SimpleCFConfig,
     config: DictConfig,
 ) -> None:
-    
     i = 0
     vehicles = [
         f'\t<vType id="{cf_config.vehicle_distribution_name}_{i}" '
-        + " ".join(
-            [f'{k}="{str(v)}"' for k, v in cf_config.cf_params.items()]
-        )
+        + " ".join([f'{k}="{str(v)}"' for k, v in cf_config.cf_params.items()])
         + "/>"
     ]
     with open(cf_config.save_path, "w") as f:
@@ -136,84 +136,181 @@ def create_simple_distribution(
         f.write("</vTypeDistribution>")
 
 
+def _parse_num_samples(num_samples: str) -> int:
+    import random
+    import re
 
-def create_simple_sampled_distribution(cf_config: SampledSimpleCFConfig, config: DictConfig):
+    if isinstance(num_samples, (int, float)):
+        return int(num_samples)
+
+    if "uniform" in num_samples:
+        y = eval(num_samples.strip("uniform"))
+        return int(random.uniform(y[0], y[1]))
+
+    if " - " in num_samples:
+        # use regex to get the numbers
+        matches = re.findall(r"\d+", num_samples)
+        return int(matches[0]) - int(matches[1])
+
+
+def create_simple_sampled_distribution(
+    cf_config: SampledSimpleCFConfig, config: DictConfig
+):
     from sumolib.vehicletype import CreateVehTypeDistribution, VehAttribute
-
 
     dist_creator = CreateVehTypeDistribution(
         cf_config.seed,
-        cf_config.num_samples,
+        _parse_num_samples(cf_config.num_samples),
         cf_config.vehicle_distribution_name,
         decimal_places=cf_config.decimal_places,
     )
 
     for k, v in cf_config.cf_params.items():
         if v.is_attr:
-            dist_creator.add_attribute(
-                VehAttribute(
-                    name=k,
-                    attribute_value=str(v.val)
-                )
-            )
+            dist_creator.add_attribute(VehAttribute(name=k, attribute_value=str(v.val)))
         else:
             dist_creator.add_attribute(
                 VehAttribute(
                     name=k,
                     distribution=v.distribution,
                     distribution_params=v.params,
-                    bounds=v.bounds, 
+                    bounds=v.bounds,
                 )
             )
-
 
     # open an xml dom for writing at the save path
     dist_creator.to_xml(
         cf_config.save_path,
     )
-    
-    
+
+
+def create_multi_type_distribution(
+    cf_config: MultiTypeCFConfig,
+    *args,
+    **kwargs,
+) -> None:
+    for config in cf_config.configs:
+        try:
+            create_simple_sampled_distribution(
+                config,
+                *args,
+            )
+        except Exception as e:
+            print(f"Error creating distribution {config.vehicle_distribution_name}")
+            raise e
+        # if isinstance(config, SampledSimpleCFConfig):
+        #     create_simple_sampled_distribution(config, *args, **kwargs)
+        # elif isinstance(config, SimpleCFConfig):
+        #     create_simple_distribution(config, *args, **kwargs)
+        # elif isinstance(config, CFTableConfig):
+        #     create_distribution_pandas(config, *args, **kwargs)
+        # else:
+        #     raise ValueError(f"Unknown config type {type(config)}")
+
+    # merge the distributions
+    merge_veh_distributions(
+        MergeVehDistributionsConfig(
+            files=[config.save_path for config in cf_config.configs],
+            distribution_name=cf_config.distribution_name,
+            output_path=cf_config.save_path,
+        )
+    )
+
 
 def merge_veh_distributions(
-    config: MergeVehDistributions,
+    config: MergeVehDistributionsConfig,
     *args,
-    **kwargs,    
+    **kwargs,
 ) -> None:
     # from lxml
     from lxml import etree as ET
+
     # make a new XML doc
     doc = ET.ElementTree(ET.fromstring("<additional/>"))
     root = doc.getroot()
     dist = ET.Element("vTypeDistribution", attrib={"id": config.distribution_name})
     
     all_vtypes = []
-    for file_ in config.files:
+    for i, file_ in enumerate(config.files):
         tree = ET.parse(file_)
-        all_vtypes.extend(tree.findall(".//vTypeDistribution/*"))
+        for vtype in tree.findall(".//vType"):
+            vtype.attrib["id"] = f"{vtype.attrib['id']}_{i}"
+            all_vtypes.append(vtype)
     dist.extend(all_vtypes)
     root.append(dist)
-    
     # save the file
     doc.write(config.output_path, pretty_print=True)
+
+
+
+def _custom_to_xml(
+        df: pd.DataFrame, 
+        file_path: str,
+        elem_cols: List[str],
+):
+    import lxml.etree as etree
+
+    data = df.iloc[0].to_dict()
+    df = df.iloc[1:].copy()
+
+    attr_cols = list(df.columns.difference(elem_cols))
+    elem_cols = elem_cols
     
-    
+    # these are constant
+    root_name = "vTypeDistribution"
+    dist_name = data['id']
+    row_name = "vType"
+    param_name = "param"
+
+    root = etree.Element(root_name)
+    root.set("id", dist_name)
+    for _, row in df.iterrows():
+        row_elem = etree.SubElement(root, row_name)
+        for attr in attr_cols:
+            if not pd.isna(row[attr]):
+                row_elem.set(attr, str(row[attr]))
+        for elem in elem_cols:
+            if not pd.isna(row[elem]):
+                elem_elem = etree.SubElement(row_elem, param_name)
+                # elem_elem.text = str(row[elem])
+                # for col in elem_cols:
+                elem_elem.set("key", elem)
+                elem_elem.set("value", str(row[elem]))
+
+
+    tree = etree.ElementTree(root)
+    tree.write(file_path, pretty_print=True, xml_declaration=True, encoding="utf-8")
+
+
 def update_veh_distribution(
-    cf_config: MergeVehDistributions,
+    cf_config: CFAddParamsConfig,
     config: DictConfig,
 ) -> None:
     # read in the vtype distribution
     try:
         import pandas as pd
     except ImportError:
-        raise ImportError("pandas is not installed. Please install it to use this block.")
-    # using pandas for this is :shrug: but I have it as a dependency already 
-    # so whatever
-    
-    df = pd.read_xml(
-        cf_config.save_path,
-        xpath="vTypeDistribution/vType",
-    )
-    
-    # update the 
-    
-    
+        raise ImportError(
+            "pandas is not installed. Please install it to use this block."
+        )
+    df = pd.read_xml(cf_config.input_file, xpath=".//*")
+
+    for param in cf_config.params:
+        df[param.name] = None
+        _df = df
+        for filt in param.filters:
+            filt.value = f'"{filt.value}"' if isinstance(filt.value, str) else filt.value
+            _df = _df.query(f"{filt.param} == {filt.value}")
+        
+        ind = _df.sample(
+            frac=param.percent,
+        ).index
+        df.loc[ind, param.name] = param.value
+
+    _custom_to_xml(df, 
+                   cf_config.save_path, 
+                   [c.name for c in cf_config.params])
+
+
+
+
