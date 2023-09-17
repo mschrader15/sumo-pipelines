@@ -180,10 +180,13 @@ def open_config_structured(
     This allows for the config to contain functions
     """
     
-
-    OmegaConf.register_new_resolver(
+    try:
+        OmegaConf.register_new_resolver(
             "yaml.update", update_parent_from_yaml, 
         )
+    except Exception as e:
+        if "already registered" not in str(e):
+            raise e
 
     if isinstance(path, list):
         all_confs = [OmegaConf.load(p) for p in path]
@@ -235,7 +238,7 @@ def open_config_structured(
 
     # resolve what I can
     walk_config(c, resolve_yaml_imports)
-    
+
     # register the other resolvers
     create_custom_resolvers()
 
