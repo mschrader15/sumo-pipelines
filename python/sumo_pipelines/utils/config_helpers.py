@@ -12,12 +12,10 @@ from sumo_pipelines.pipe_handlers import load_function
 
 
 def create_custom_resolvers():
-    
     def update_parent_from_yaml(p, *, __parent__):
         c = OmegaConf.load(p)
         __parent__.update(c)
-        
-    
+
     try:
         OmegaConf.register_new_resolver(
             "import", lambda x: load_function(x), use_cache=True
@@ -122,7 +120,10 @@ def open_config_structured(
         for conf in all_confs:
             if conf.Blocks.get("SimulationConfig", None) is not None:
                 # this is some tom fuckery to get the additional files
-                if conf.Blocks.SimulationConfig.get('additional_files', None) is not None:
+                if (
+                    conf.Blocks.SimulationConfig.get("additional_files", None)
+                    is not None
+                ):
                     all_additional_files.extend(
                         list(
                             map(
@@ -133,7 +134,10 @@ def open_config_structured(
                             )
                         )
                     )
-                if conf.Blocks.SimulationConfig.get('additional_sim_params', None) is not None:
+                if (
+                    conf.Blocks.SimulationConfig.get("additional_sim_params", None)
+                    is not None
+                ):
                     additional_sim_params.extend(
                         list(
                             map(

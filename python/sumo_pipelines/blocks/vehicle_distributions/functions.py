@@ -187,9 +187,11 @@ def merge_veh_distributions(
     dist = ET.Element("vTypeDistribution", attrib={"id": config.distribution_name})
     
     all_vtypes = []
-    for file_ in config.files:
+    for i, file_ in enumerate(config.files):
         tree = ET.parse(file_)
-        all_vtypes.extend(tree.findall(".//vTypeDistribution/*"))
+        for vtype in tree.findall(".//vType"):
+            vtype.attrib["id"] = f"{vtype.attrib['id']}_{i}"
+            all_vtypes.append(vtype)
     dist.extend(all_vtypes)
     root.append(dist)
     
