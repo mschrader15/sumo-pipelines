@@ -48,7 +48,7 @@ class ParamConfig:
 
 @dataclass
 class SampledSimpleCFConfig(SimpleCFConfig):
-    seed: int = field(default=42)
+    seed: float = field(default=42)
     decimal_places: int = field(default=3)
     num_samples: Any = field(default=100)
     cf_params: Dict[str, ParamConfig] = field(default_factory=dict)

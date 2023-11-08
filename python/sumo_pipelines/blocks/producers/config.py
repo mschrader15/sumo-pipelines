@@ -1,9 +1,8 @@
 from pathlib import Path
 from dataclasses import MISSING, dataclass, field
-from typing import Any, List
+from typing import Any, List, Dict
 
 from omegaconf import DictConfig, ListConfig
-
 
 @dataclass
 class ReadConfig:
@@ -33,3 +32,28 @@ class IteratorConfig:
     choices: List = field(default_factory=list)
 
 
+
+@dataclass
+class SobolItem:
+    bounds: List[float]
+    val: Any = MISSING
+
+
+@dataclass
+class SobolSequenceConfig:
+    save_path: Path
+    params: Dict[str, SobolItem]
+    N: int
+    # sequence_type: str = "sobol"
+    calc_second_order: bool = False
+
+    @staticmethod
+    def build_sobol_dict(
+        cls_obj,
+    ) -> dict:
+        sobol_dict = {
+            "num_vars": len(cls_obj.params),
+            "names": [name for name in cls_obj.params.keys()],
+            "bounds": [item.bounds for item in cls_obj.params.values()],
+        }
+        return sobol_dict
