@@ -216,30 +216,39 @@ def fast_tripinfo_fuel(config: TripInfoTotalFuelConfig, *args, **kwargs) -> None
     config.val = total_fuel
 
 
-
-
 def emissions_table_to_total(
     config: EmissionsTableFuelTotalConfig, *args, **kwargs
 ) -> None:
     import polars as pl
 
     df = (
-        pl.scan_parquet(config.input_file).filter(
-            pl.col("timestep").is_between(config.time_low_filter, config.time_high_filter)
-        ).sort('timestep').with_columns([
-            (pl.col("fuel") * config.sim_step / 1e3).alias("fuel"),
-            (pl.col('x').diff() ** 2 + pl.col('y').diff() ** 2).sqrt().over('id').fill_null(0).alias('distance')
-        ]).with_columns([
-            pl.when(
-                pl.col('eclass').str.contains('_D_')
-            ).then(
-                pl.col('fuel') * SUMO_DIESEL_GRAM_TO_JOULE
-            ).otherwise(
-                pl.col('fuel') * SUMO_GASOLINE_GRAM_TO_JOULE
-            ).alias('fuel_energy')
-        ])
+        pl.scan_parquet(config.input_file)
+        .filter(
+            pl.col("timestep").is_between(
+                config.time_low_filter, config.time_high_filter
+            )
+        )
+        .sort("timestep")
+        .with_columns(
+            [
+                (pl.col("fuel") * config.sim_step / 1e3).alias("fuel"),
+                (pl.col("x").diff() ** 2 + pl.col("y").diff() ** 2)
+                .sqrt()
+                .over("id")
+                .fill_null(0)
+                .alias("distance"),
+            ]
+        )
+        .with_columns(
+            [
+                pl.when(pl.col("eclass").str.contains("_D_"))
+                .then(pl.col("fuel") * SUMO_DIESEL_GRAM_TO_JOULE)
+                .otherwise(pl.col("fuel") * SUMO_GASOLINE_GRAM_TO_JOULE)
+                .alias("fuel_energy")
+            ]
+        )
     )
 
-    config.total_fuel = df.select(pl.col("fuel").sum()).collect()['fuel'][0]
-    config.total_distance = df.select(pl.col("distance").sum()).collect()['distance'][0]
-    config.num_vehicles = df.select(pl.col("id").n_unique()).collect()['id'][0]
+    config.total_fuel = df.select(pl.col("fuel").sum()).collect()["fuel"][0]
+    config.total_distance = df.select(pl.col("distance").sum()).collect()["distance"][0]
+    config.num_vehicles = df.select(pl.col("id").n_unique()).collect()["id"][0]

@@ -159,7 +159,7 @@ def create_simple_sampled_distribution(
     from sumolib.vehicletype import CreateVehTypeDistribution, VehAttribute
 
     dist_creator = CreateVehTypeDistribution(
-        cf_config.seed,
+        int(cf_config.seed),
         _parse_num_samples(cf_config.num_samples),
         cf_config.vehicle_distribution_name,
         decimal_places=cf_config.decimal_places,

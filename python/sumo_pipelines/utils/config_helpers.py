@@ -71,6 +71,16 @@ def create_custom_resolvers():
             lambda x: simple_eval(x),  # this is dangerous. How to make it safe?
         )
         
+        OmegaConf.register_new_resolver(
+            "call", 
+            lambda f, *x: f(*x),
+        )
+        
+        OmegaConf.register_new_resolver(
+            "int", 
+            lambda x: int(x),
+        )
+        
     except Exception as e:
         if "already registered" in str(e):
             pass
@@ -183,6 +193,7 @@ def open_config_structured(
         OmegaConf.register_new_resolver(
             "yaml.update", update_parent_from_yaml, 
         )
+        
     except Exception as e:
         if "already registered" not in str(e):
             raise e
