@@ -193,6 +193,7 @@ def open_config_structured(
         OmegaConf.register_new_resolver(
             "yaml.update", update_parent_from_yaml, 
         )
+        
     except Exception as e:
         if "already registered" not in str(e):
             raise e
