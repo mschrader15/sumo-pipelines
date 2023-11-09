@@ -16,9 +16,7 @@ except ImportError:
     ray_exists = False
 
 
-def run_pipeline(
-    config: Union[Path, List[Path], PipelineConfig], debug: bool
-) -> PipelineConfig:
+def run_pipeline(config: Union[Path, List[Path], PipelineConfig], debug: bool, gui: bool) -> PipelineConfig:
     """Run the pipeline"""
     #
     c = (
@@ -29,6 +27,8 @@ def run_pipeline(
         if isinstance(config, (Path, str, list))
         else config
     )
+    
+    c.Blocks.SimulationConfig.gui = gui
 
     # create the consumer functions
     for k, pipeline in enumerate(c.Pipeline.pipeline):
