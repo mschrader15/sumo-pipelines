@@ -4,19 +4,22 @@ import sys
 from omegaconf import DictConfig
 from .config import RouteSamplerConfig, RandomTripsConfig
 
-sys.path.append(os.path.join(os.environ.get("SUMO_HOME"), "tools"))
-
-try:
-    import routeSampler
-    import randomTrips
-except ImportError:
-    raise ImportError("$SUMO_HOME must be in your path")
-
 
 def call_route_sampler(
     route_sampler_config: RouteSamplerConfig,
     config: DictConfig,
 ) -> None:
+    
+    try:
+        sys.path.append(os.path.join(os.environ.get("SUMO_HOME"), "tools"))
+    except TypeError:
+        raise TypeError("SUMO_HOME is not set")
+
+    try:
+        import routeSampler
+    except ImportError:
+        raise ImportError("$SUMO_HOME must be in your path")
+
 
     routeSampler.main(
         routeSampler.get_options(
@@ -41,6 +44,16 @@ def call_random_trips(
     *args,
     **kwargs,
 ) -> Path:
+    
+    try:
+        sys.path.append(os.path.join(os.environ.get("SUMO_HOME"), "tools"))
+    except TypeError:
+        raise TypeError("SUMO_HOME is not set")
+
+    try:
+        import randomTrips
+    except ImportError:
+        raise ImportError("$SUMO_HOME must be in your path")
 
     net_file = config.net_file
     output_file = Path(config.output_file)

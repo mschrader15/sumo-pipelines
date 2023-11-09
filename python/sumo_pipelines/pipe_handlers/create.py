@@ -1,4 +1,5 @@
 import importlib
+import os
 from pathlib import Path
 from typing import Callable, List, Tuple, Union, TYPE_CHECKING
 
@@ -96,7 +97,7 @@ def create_consumers(
     ]
 
     if parallel:
-        @ray.remote(num_cpus=1)
+        @ray.remote(num_cpus=1, )
         def consumer(main_config):
             
             create_custom_resolvers()

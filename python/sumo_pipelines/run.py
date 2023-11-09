@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import List, Union
 
@@ -15,7 +16,9 @@ except ImportError:
     ray_exists = False
 
 
-def run_pipeline(config: Union[Path, List[Path], PipelineConfig], debug: bool) -> PipelineConfig:
+def run_pipeline(
+    config: Union[Path, List[Path], PipelineConfig], debug: bool
+) -> PipelineConfig:
     """Run the pipeline"""
     #
     c = (
@@ -36,9 +39,11 @@ def run_pipeline(config: Union[Path, List[Path], PipelineConfig], debug: bool) -
                     "Ray is not installed, but is required for parallel processing"
                 )
             if ray.is_initialized():
-                ray.init(address="auto", )
+                ray.init(
+                    address="auto",
+                )
             else:
-                ray.init(local_mode=debug, num_cpus=pipeline.number_of_workers)
+                ray.init(local_mode=debug, )
 
             consumer = create_consumers(
                 [
