@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "sumo-pipelines"
-version = "1.1.4"
+version = "1.1.5"
 urls = { homepage = "https://github.com/mschrader15/sumo-pipelines" }
 
 [tool.maturin]
