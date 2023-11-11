@@ -76,13 +76,25 @@ def get_time_indices(config, data):
     return time_low_i, time_high_i
 
 
-def get_fuel_and_position_vec(data, time_low_i, time_high_i, filter_str, conv):
+def get_fuel_and_position_vec(data, time_low_i, time_high_i,):
     all_vehicles = []
     position_vec = []
     fuel_vec = []
-    for match in re.finditer(pattern_matcher(filter_str), data[time_low_i:time_high_i]):
+    diesel_filt = b'_D_'
+    gas_filt = b'_G_'
+    for match in re.finditer(pattern_matcher(None), data[time_low_i:time_high_i]):
         fc = match[3]
         all_vehicles.append(match[1])
+
+        conv = 1
+        # get the fuel type
+        if diesel_filt in match[2]:
+            conv = SUMO_DIESEL_GRAM_TO_JOULE
+        elif gas_filt in match[2]:
+            conv = SUMO_GASOLINE_GRAM_TO_JOULE
+        else:
+            continue
+
         fuel_vec.append(float(fc) / 1e3 * conv)
         position_vec.append((float(match[4]), float(match[5])))
     return all_vehicles, position_vec, fuel_vec
@@ -113,9 +125,6 @@ def fast_total_energy(
     Returns:
         float: _description_
     """
-    diesel_filter = "\w+_D_\w+"  # just do this by default
-    gasoline_filter = "\w+_G_\w+"
-
     polygon = get_polygon(config)
 
     fc_t = 0
@@ -124,15 +133,8 @@ def fast_total_energy(
         time_low_i, time_high_i = get_time_indices(config, data)
 
         all_vehicles, position_vec, fuel_vec = get_fuel_and_position_vec(
-            data, time_low_i, time_high_i, diesel_filter, SUMO_DIESEL_GRAM_TO_JOULE
+            data, time_low_i, time_high_i, 
         )
-        all_vehicles_g, position_vec_g, fuel_vec_g = get_fuel_and_position_vec(
-            data, time_low_i, time_high_i, gasoline_filter, SUMO_GASOLINE_GRAM_TO_JOULE
-        )
-
-        all_vehicles.extend(all_vehicles_g)
-        position_vec.extend(position_vec_g)
-        fuel_vec.extend(fuel_vec_g)
 
         if polygon:
             is_inside = is_inside_sm_parallel(position_vec, polygon)
