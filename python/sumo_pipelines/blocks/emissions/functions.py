@@ -142,7 +142,7 @@ def fast_total_energy(
         fc_t = fuel_vec.sum() * config.sim_step
         cars_total = np.unique(all_vehicles).shape[0]
 
-    config.total_energy = fc_t
+    config.total_energy = float(fc_t)
     config.num_vehicles = cars_total
 
     delete_xml(config)
