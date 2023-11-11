@@ -204,7 +204,7 @@ def open_config_structured(
         all_additional_files = []
         additional_sim_params = []
         for conf in all_confs:
-            if conf.Blocks.get("SimulationConfig", None) is not None:
+            if conf.get('Blocks', {}).get("SimulationConfig", None) is not None:
                 # this is some tom fuckery to get the additional files
                 if (
                     conf.Blocks.SimulationConfig.get("additional_files", None)

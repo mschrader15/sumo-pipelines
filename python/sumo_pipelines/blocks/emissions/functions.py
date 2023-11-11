@@ -2,10 +2,17 @@ import mmap
 from pathlib import Path
 import re
 
+import numpy as np
+
 from .config import (
     EmissionsTableFuelTotalConfig,
     FuelTotalConfig,
     TripInfoTotalFuelConfig,
+)
+
+# from sumo_pipelines.utils.geo_helpers import is_inside_sm_parallel
+from sumo_pipelines.sumo_pipelines_rs import (
+    is_inside_sm_parallel_py as is_inside_sm_parallel,
 )
 
 SUMO_DIESEL_GRAM_TO_JOULE: float = 42.8e-3
@@ -16,6 +23,81 @@ pattern = (
 )
 
 
+def pattern_matcher(eclass_regex: str) -> re.Pattern:
+    if eclass_regex:
+        return (
+            re.compile(
+                r'id="(.+?)" eclass="\w+\/({})".+fuel="([\d\.]*)".+x="([\d\.]*)" y="([\d\.]*)"'.format(eclass_regex).encode()
+            )
+        )
+    return re.compile(
+        r'id="(.+?)" eclass="\w+\/(\w+?)".+fuel="([\d\.]*)".+x="([\d\.]*)" y="([\d\.]*)"'.encode()
+    )
+
+
+def get_polygon(config):
+    if config.polygon_file:
+        from sumolib.shapes import polygon
+
+        assert Path(config.polygon_file).exists(), "The polygon file does not exist"
+
+        polygons = polygon.read(config.polygon_file)
+        assert len(polygons) == 1, "The polygon file should only contain one polygon"
+
+        return polygons[0].shape
+    return None
+
+
+def get_time_indices(config, data):
+    time_low_i = (
+        re.search(
+            'time="{}"'.format(
+                "{:.2f}".format(config.output_time_filter_lower)
+            ).encode(),
+            data,
+        ).span()[-1]
+        if config.output_time_filter_lower
+        else 0
+    )
+    try:
+        time_high_i = (
+            re.search(
+                'time="{}"'.format(
+                    "{:.2f}".format(config.output_time_filter_upper)
+                ).encode(),
+                data,
+            ).span()[0]
+            if config.output_time_filter_upper
+            else -1
+        )
+    except AttributeError:
+        # this means that the time high does not exist in the file so we count all the way to the end
+        time_high_i = -1
+    return time_low_i, time_high_i
+
+
+def get_fuel_and_position_vec(data, time_low_i, time_high_i, filter_str, conv):
+    all_vehicles = []
+    position_vec = []
+    fuel_vec = []
+    for match in re.finditer(pattern_matcher(filter_str), data[time_low_i:time_high_i]):
+        fc = match[3]
+        all_vehicles.append(match[1])
+        fuel_vec.append(float(fc) / 1e3 * conv)
+        position_vec.append((float(match[4]), float(match[5])))
+    return all_vehicles, position_vec, fuel_vec
+
+
+def delete_xml(config):
+    if config.delete_xml:
+        Path(config.emissions_xml).unlink()
+
+
+def save_to_file(config, fc_t, cars_total):
+    with open(config.output_path, "w") as f:
+        f.write(f"{str(fc_t)},{cars_total}")
+
+
 def fast_total_energy(
     config: FuelTotalConfig,
     *args,
@@ -24,76 +106,46 @@ def fast_total_energy(
     """
     This function reads the emissions xml file and returns the total energy consumption in MJ in the time range.
 
-    Diesel and gasoline filters are needed to calculate the energy consumption of diesel and gasoline separately. It is applied to the vehicles' emissions class
 
     Args:
-        file_path: path to the emissions xml file
-        sim_step: simulation step
-        time_low: lower time bound
-        time_high: upper time bound
-        diesel_filter: function to filter diesel vehicles, as a string
-        gasoline_filter: function to filter gasoline vehicles, as a string
+        config (FuelTotalConfig): _description_
 
     Returns:
-        total energy consumption in MJ
+        float: _description_
     """
-    diesel_filter = eval(config.diesel_filter) if config.diesel_filter else False
-    gasoline_filter = eval(config.gasoline_filter) if config.gasoline_filter else False
-    x_filter = eval(config.x_filter) if config.x_filter else False
-    y_filter = eval(config.y_filter) if config.y_filter else False
+    diesel_filter = "\w+_D_\w+"  # just do this by default
+    gasoline_filter = "\w+_G_\w+"
+
+    polygon = get_polygon(config)
 
     fc_t = 0
     with open(config.emissions_xml, "r+") as f:
         data = mmap.mmap(f.fileno(), 0)
-        time_low_i = (
-            re.search(
-                'time="{}"'.format(
-                    "{:.2f}".format(config.output_time_filter_lower)
-                ).encode(),
-                data,
-            ).span()[-1]
-            if config.output_time_filter_lower
-            else 0
+        time_low_i, time_high_i = get_time_indices(config, data)
+
+        all_vehicles, position_vec, fuel_vec = get_fuel_and_position_vec(
+            data, time_low_i, time_high_i, diesel_filter, SUMO_DIESEL_GRAM_TO_JOULE
         )
-        try:
-            time_high_i = (
-                re.search(
-                    'time="{}"'.format(
-                        "{:.2f}".format(config.output_time_filter_upper)
-                    ).encode(),
-                    data,
-                ).span()[0]
-                if config.output_time_filter_upper
-                else -1
-            )
-        except AttributeError:
-            # this means that the time high does not exist in the file so we count all the way to the end
-            time_high_i = -1
+        all_vehicles_g, position_vec_g, fuel_vec_g = get_fuel_and_position_vec(
+            data, time_low_i, time_high_i, gasoline_filter, SUMO_GASOLINE_GRAM_TO_JOULE
+        )
 
-        all_vehicles = set()
-        for match in re.finditer(pattern, data[time_low_i:time_high_i]):
-            if (not x_filter or (x_filter and x_filter(float(match[4])))) and (
-                not y_filter or (y_filter and y_filter(float(match[5])))
-            ):
-                fc = float(match[3]) / 1e3  # this is in mg/s * 1 / 1000 g/mg
-                all_vehicles.add(match[1])
-                if diesel_filter or gasoline_filter:
-                    if gasoline_filter(match[2].decode()):
-                        fc *= SUMO_GASOLINE_GRAM_TO_JOULE
-                    elif diesel_filter(match[2].decode()):
-                        fc *= SUMO_DIESEL_GRAM_TO_JOULE
-                    else:
-                        raise ValueError("The filter did not match any of the classes")
-                fc_t += fc
-        del data
-    total_fc = fc_t * config.sim_step  # output is in MJ
+        all_vehicles.extend(all_vehicles_g)
+        position_vec.extend(position_vec_g)
+        fuel_vec.extend(fuel_vec_g)
 
-    if config.delete_xml:
-        Path(config.emissions_xml).unlink()
+        if polygon:
+            is_inside = is_inside_sm_parallel(position_vec, polygon)
+            fuel_vec = np.array(fuel_vec)[is_inside]
+            all_vehicles = np.array(all_vehicles)[is_inside]
 
-    # save the total fuel consumption to a file
-    with open(config.output_path, "w") as f:
-        f.write(f"{str(total_fc)},{len(all_vehicles)}")
+        fc_t = fuel_vec.sum() * config.sim_step
+        cars_total = np.unique(all_vehicles).shape[0]
+
+    config.total_energy = fc_t
+    config.num_vehicles = cars_total
+
+    delete_xml(config)
 
 
 def fast_timestep_energy(
@@ -103,87 +155,46 @@ def fast_timestep_energy(
 ) -> float:
     """
     This function reads the emissions xml file and returns the total energy consumption in MJ in the time range.
-
-    Diesel and gasoline filters are needed to calculate the energy consumption of diesel and gasoline separately. It is applied to the vehicles' emissions class
-
-    Args:
-        file_path: path to the emissions xml file
-        sim_step: simulation step
-        time_low: lower time bound
-        time_high: upper time bound
-        diesel_filter: function to filter diesel vehicles, as a string
-        gasoline_filter: function to filter gasoline vehicles, as a string
-
-    Returns:
-        total energy consumption in MJ
     """
-    diesel_filter = eval(config.diesel_filter) if config.diesel_filter else False
-    gasoline_filter = eval(config.gasoline_filter) if config.gasoline_filter else False
-    x_filter = eval(config.x_filter) if config.x_filter else False
-    y_filter = eval(config.y_filter) if config.y_filter else False
 
-    with open(config.emissions_xml, "r+") as f:
-        data = mmap.mmap(f.fileno(), 0)
-        time_low_i = (
-            re.search(
-                'time="{}"'.format(
-                    "{:.2f}".format(config.output_time_filter_lower)
-                ).encode(),
-                data,
-            ).span()[-1]
-            if config.output_time_filter_lower
-            else 0
-        )
-        try:
-            time_high_i = (
-                re.search(
-                    'time="{}"'.format(
-                        "{:.2f}".format(config.output_time_filter_upper)
-                    ).encode(),
-                    data,
-                ).span()[0]
-                if config.output_time_filter_upper
-                else -1
-            )
-        except AttributeError:
-            # this means that the time high does not exist in the file so we count all the way to the end
-            time_high_i = -1
+    raise NotImplementedError("This function is not implemented yet")
 
-        finder = re.finditer(rb'time="([\d\.]*)"', data[time_low_i - 100 : time_high_i])
-        time_start = next(finder)
-        time_list = []
-        for time_end in finder:
-            time_list.append([time_start[1].decode(), 0, set()])
-            for match in re.finditer(
-                pattern, data[time_start.span()[1] : time_end.span()[0]]
-            ):
-                if (not x_filter or (x_filter and x_filter(float(match[4])))) and (
-                    not y_filter or (y_filter and y_filter(float(match[5])))
-                ):
-                    time_list[-1][-1].add(match[1])
-                    fc = float(match[3]) / 1e3  # this is in mg/s * 1 / 1000 g/mg
-                    if diesel_filter or gasoline_filter:
-                        if gasoline_filter(match[2].decode()):
-                            fc *= SUMO_GASOLINE_GRAM_TO_JOULE
-                        elif diesel_filter(match[2].decode()):
-                            fc *= SUMO_DIESEL_GRAM_TO_JOULE
-                        else:
-                            raise ValueError(
-                                "The filter did not match any of the classes"
-                            )
-                    time_list[-1][-1] += fc
-                time_list[-1][-1] *= config.sim_step
-            time_start = time_end
-        del data
+    # diesel_filter = "_D_"  # just do this by default
+    # gasoline_filter = "_G_"
 
-    if config.delete_xml:
-        Path(config.emissions_xml).unlink()
+    # polygon = get_polygon(config)
 
-    # save the total fuel consumption to a file
-    with open(config.output_path, "w") as f:
-        for time, fuel, unique_ids in time_list:
-            # TODO: add a way to write the unique ids
-            f.write(",".join((str(time), str(fuel))) + "\n")
+    # with open(config.emissions_xml, "r+") as f:
+    #     data = mmap.mmap(f.fileno(), 0)
+    #     time_low_i, time_high_i = get_time_indices(config, data)
+
+    #     all_vehicles, position_vec, fuel_vec = get_fuel_and_position_vec(
+    #         data, time_low_i, time_high_i, diesel_filter, SUMO_DIESEL_GRAM_TO_JOULE
+    #     )
+    #     all_vehicles_g, position_vec_g, fuel_vec_g = get_fuel_and_position_vec(
+    #         data, time_low_i, time_high_i, gasoline_filter, SUMO_GASOLINE_GRAM_TO_JOULE
+    #     )
+
+    #     all_vehicles.extend(all_vehicles_g)
+    #     position_vec.extend(position_vec_g)
+    #     fuel_vec.extend(fuel_vec_g)
+
+    #     if polygon:
+    #         is_inside = is_inside_sm_parallel(position_vec, polygon)
+    #         fuel_vec = fuel_vec[is_inside]
+    #         all_vehicles = all_vehicles[is_inside]
+
+    #     fc_t = sum(fuel_vec) * config.sim_step
+    #     cars_total = len(set(all_vehicles))
+
+    # if config.delete_xml:
+    #     Path(config.emissions_xml).unlink()
+
+    # # save the total fuel consumption to a file
+    # with open(config.output_path, "w") as f:
+    #     for time, fuel, unique_ids in time_list:
+    #         # TODO: add a way to write the unique ids
+    #         f.write(",".join((str(time), str(fuel))) + "\n")
 
 
 def fast_tripinfo_fuel(config: TripInfoTotalFuelConfig, *args, **kwargs) -> None:
