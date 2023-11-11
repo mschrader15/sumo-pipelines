@@ -143,7 +143,7 @@ def fast_total_energy(
         cars_total = np.unique(all_vehicles).shape[0]
 
     config.total_energy = float(fc_t)
-    config.num_vehicles = cars_total
+    config.total_vehicles = cars_total
 
     delete_xml(config)
 
