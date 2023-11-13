@@ -15,8 +15,8 @@ from sumo_pipelines.sumo_pipelines_rs import (
     is_inside_sm_parallel_py as is_inside_sm_parallel,
 )
 
-SUMO_DIESEL_GRAM_TO_JOULE: float = 42.8e-3
-SUMO_GASOLINE_GRAM_TO_JOULE: float = 43.4e-3
+SUMO_DIESEL_GRAM_TO_JOULE: float = 42.8e3
+SUMO_GASOLINE_GRAM_TO_JOULE: float = 43.4e3
 
 pattern = (
     rb'id="(.+?)" eclass="\w+\/(\w+?)".+fuel="([\d\.]*)".+x="([\d\.]*)" y="([\d\.]*)"'
