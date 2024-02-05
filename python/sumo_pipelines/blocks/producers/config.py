@@ -2,7 +2,6 @@ from pathlib import Path
 from dataclasses import MISSING, dataclass, field
 from typing import Any, List, Dict
 
-from omegaconf import DictConfig, ListConfig
 
 @dataclass
 class ReadConfig:

@@ -25,7 +25,7 @@ class EmissionsTableFuelTotalConfig:
     num_vehicles: int = MISSING
     time_low_filter: float = field(default=0)
     time_high_filter: float = field(default=1e9)
-    
+
 
 @dataclass
 class TripInfoTotalFuelConfig:
@@ -33,4 +33,3 @@ class TripInfoTotalFuelConfig:
     val: float
     time_low_filter: float = field(default=0)
     time_high_filter: float = field(default=1e9)
-    

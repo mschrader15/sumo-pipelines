@@ -27,9 +27,7 @@ def load_function(function: str) -> Callable:
         ).__dict__[function.split(".")[-1]]
     elif function.startswith("optimization"):
         return importlib.import_module(
-            ".".join(
-                ("sumo_pipelines", *((function).split(".")[:-1]))
-            )
+            ".".join(("sumo_pipelines", *((function).split(".")[:-1])))
         ).__dict__[function.split(".")[-1]]
     try:
         return importlib.import_module(
@@ -37,9 +35,7 @@ def load_function(function: str) -> Callable:
         ).__dict__[function.split(".")[-1]]
     except ModuleNotFoundError:
         return importlib.import_module(
-            ".".join(
-                ("sumo_pipelines", *((function).split(".")[:-1]))
-            )
+            ".".join(("sumo_pipelines", *((function).split(".")[:-1])))
         ).__dict__[function.split(".")[-1]]
 
 
@@ -76,8 +72,36 @@ def recursive_producer(producers: List[Tuple[str, List[str]]]) -> callable:
     return _recursive_producer
 
 
+def persistent_producer(
+    producers: List[Tuple[str, List[str]]],
+) -> Union[Callable, object]:
+    producers = [(load_function(function), dotpath) for function, dotpath in producers]
+
+    assert len(producers) == 1, "Only one producer is supported for persistent_producer"
+
+    @ray.remote(
+        num_cpus=1,
+    )
+    def _persistent_producer(
+        main_config,
+        *args,
+        **kwargs,
+    ):
+        return producers[0][0](
+            OmegaConf.select(main_config, producers[0][1]),
+            main_config,
+            producers[0][1],
+            *args,
+            **kwargs,
+        )
+    
+
+    return _persistent_producer
+
 def create_consumers(
-    function_n_configs: List[Tuple[str, List[str]]], parallel: bool = False
+    function_n_configs: List[Tuple[str, List[str]]],
+    parallel: bool = False,
+    # queue: bool = False,
 ) -> Union[Callable, object]:
     """
     Create a consumer from a list of functions and dotpaths
@@ -90,28 +114,33 @@ def create_consumers(
         Union[Callable, object]: A consumer
     """
     from sumo_pipelines.utils.config_helpers import create_custom_resolvers
-    
-    
+
     func = [
         (load_function(function), dotpath) for function, dotpath in function_n_configs
     ]
 
     if parallel:
-        @ray.remote(num_cpus=1, )
-        def consumer(main_config):
-            
+
+        @ray.remote(
+            num_cpus=1,
+            runtime_env={
+                'env_vars': {
+                    "PYTHONPATH": os.environ.get("PYTHONPATH", ""),
+                }
+            }
+        )
+        def consumer(main_config, *args, **kwargs):
             create_custom_resolvers()
-            
+
             for f, dotpath in func:
-                f(OmegaConf.select(main_config, dotpath), main_config)
+                f(OmegaConf.select(main_config, dotpath), main_config, *args, **kwargs)
     else:
-        def consumer(main_config):
-            
+
+        def consumer(main_config, *args, **kwargs):
             create_custom_resolvers()
-            
+
             for f, dotpath in func:
-                f(OmegaConf.select(main_config, dotpath), main_config)
-        
+                f(OmegaConf.select(main_config, dotpath), main_config, *args, **kwargs)
 
     return consumer
 
@@ -143,8 +172,7 @@ def execute_pipe_block(
 
     # load the functions
     functions = [
-        (block_piece.function, block_piece.config)
-        for block_piece in block.consumers
+        (block_piece.function, block_piece.config) for block_piece in block.consumers
     ]
 
     # execute the functions

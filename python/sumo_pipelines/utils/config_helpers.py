@@ -5,7 +5,7 @@ import random
 import sys
 from typing import List, Union
 
-from omegaconf import OmegaConf, SCMode, DictConfig, ListConfig
+from omegaconf import OmegaConf, DictConfig, ListConfig
 
 
 from sumo_pipelines.config import PipelineConfig
@@ -16,11 +16,12 @@ from sumo_pipelines.pipe_handlers import load_function
 import re
 
 # Kept outside simple_eval() just for performance
-_re_simple_eval = re.compile(rb'd([\x00-\xFF]+)S\x00')
+_re_simple_eval = re.compile(rb"d([\x00-\xFF]+)S\x00")
+
 
 def simple_eval(expr):
     try:
-        c = compile(expr, 'userinput', 'eval')
+        c = compile(expr, "userinput", "eval")
     except SyntaxError as e:
         raise ValueError(f"Malformed expression: {expr}") from e
     m = _re_simple_eval.fullmatch(c.co_code)
@@ -33,14 +34,14 @@ def simple_eval(expr):
 
 
 def update_parent_from_yaml(p, *, _parent_: DictConfig):
-        c = OmegaConf.load(p)
-        _parent_.update(c)
+    c = OmegaConf.load(p)
+    _parent_.update(c)
 
-        # specian key to load a yaml
-        del _parent_["yaml"]
+    # specian key to load a yaml
+    del _parent_["yaml"]
+
 
 def create_custom_resolvers():
-
     try:
         OmegaConf.register_new_resolver(
             "import", lambda x: load_function(x), use_cache=True
@@ -55,32 +56,32 @@ def create_custom_resolvers():
         )
 
         OmegaConf.register_new_resolver(
-            "randint", 
+            "randint",
             lambda x, y: random.randint(x, y),
             use_cache=True,
         )
 
         OmegaConf.register_new_resolver(
-            "uniform", 
+            "uniform",
             lambda x, y: random.uniform(x, y),
             use_cache=True,
         )
 
         OmegaConf.register_new_resolver(
-            "math", 
+            "math",
             lambda x: simple_eval(x),  # this is dangerous. How to make it safe?
         )
-        
+
         OmegaConf.register_new_resolver(
-            "call", 
+            "call",
             lambda f, *x: f(*x),
         )
-        
+
         OmegaConf.register_new_resolver(
-            "int", 
+            "int",
             lambda x: int(x),
         )
-        
+
     except Exception as e:
         if "already registered" in str(e):
             pass
@@ -137,7 +138,7 @@ def open_completed_config(
     """Open a config file and return a DictConfig object"""
     try:
         create_custom_resolvers()
-    except Exception as e:
+    except Exception:
         pass
 
     with open(path, "r") as f:
@@ -151,13 +152,14 @@ def open_completed_config(
     return OmegaConf.merge(s, c)
 
 
-def resolve_yaml_imports(cfg: DictConfig,):
+def resolve_yaml_imports(
+    cfg: DictConfig,
+):
     # if OmegaConf.has_resolver(cfg, "yaml.update"):
     try:
         OmegaConf.resolve(cfg)
-    except Exception as e:
+    except Exception:
         pass
-    
 
 
 def walk_config(cfg: DictConfig, func):
@@ -166,17 +168,16 @@ def walk_config(cfg: DictConfig, func):
         for k in cfg.keys():
             try:
                 walk_config(cfg[k], func)
-            except Exception as e:
+            except Exception:
                 pass
     elif isinstance(cfg, ListConfig):
         for i in range(len(cfg)):
             try:
                 walk_config(cfg[i], func)
-            except Exception as e:
+            except Exception:
                 pass
     else:
         func(cfg)
-
 
 
 def open_config_structured(
@@ -188,12 +189,13 @@ def open_config_structured(
 
     This allows for the config to contain functions
     """
-    
+
     try:
         OmegaConf.register_new_resolver(
-            "yaml.update", update_parent_from_yaml, 
+            "yaml.update",
+            update_parent_from_yaml,
         )
-        
+
     except Exception as e:
         if "already registered" not in str(e):
             raise e
@@ -204,7 +206,7 @@ def open_config_structured(
         all_additional_files = []
         additional_sim_params = []
         for conf in all_confs:
-            if conf.get('Blocks', {}).get("SimulationConfig", None) is not None:
+            if conf.get("Blocks", {}).get("SimulationConfig", None) is not None:
                 # this is some tom fuckery to get the additional files
                 if (
                     conf.Blocks.SimulationConfig.get("additional_files", None)
@@ -265,7 +267,25 @@ def open_config_structured(
             PipelineConfig,
         )
     # merge the structured config with the loaded config
-    c = OmegaConf.merge(s, c)
+    try:
+        c = OmegaConf.merge(s, c)
+    except Exception as e:
+        # try to merge the sub configs at this point
+        from sumo_pipelines.config import Pipeline, Blocks, MetaData
+
+        for k in c.keys():
+            if k in ["Pipeline", "Blocks", "MetaData"]:
+                try:
+                    c[k] = OmegaConf.merge(
+                        OmegaConf.structured(
+                            eval(k),
+                        ),
+                        c[k],
+                    )
+                except Exception as e:
+                    print("Failed to merge: ", k, ". Continiung...")
+
+
 
     # if resolve metadata
     if resolve_output:

@@ -1,12 +1,10 @@
-from copy import deepcopy
 from dataclasses import dataclass, field, MISSING, make_dataclass
-from datetime import datetime
 import importlib
 import inspect
 from pathlib import Path
-from typing import Any, Callable, Dict, Generator, List, Tuple, Union, Optional
+from typing import Any, Dict, List, Union, Optional
+from omegaconf import DictConfig
 
-from omegaconf import DictConfig, OmegaConf
 
 from sumo_pipelines.blocks import *
 
@@ -32,6 +30,7 @@ class PipeBlock:
     consumers: List[PipePiece] = field(default_factory=list)
     parallel: bool = field(default=False)
     number_of_workers: Union[str, int] = field(default="auto")
+    queue_based: bool = field(default=False)
 
 
 @dataclass
@@ -78,10 +77,14 @@ def get_blocks():
 class Blocks:
     pass
 
-Blocks = make_dataclass(
+
+Blocks = make_dataclass(  # noqa: F811
     "Blocks",
     [(config.__name__, Optional[config], None) for config in get_blocks().values()],
 )
+
+
+# extend the dataclass with
 
 
 @dataclass
@@ -91,4 +94,3 @@ class PipelineConfig:
     Metadata: MetaData
     Blocks: Blocks
     Pipeline: Pipeline
-

@@ -82,12 +82,12 @@ def generate_sobol_sequence(
 ) -> Generator[DictConfig, None, None]:
     try:
         from SALib.sample import sobol
-    except ImportError as e:
+    except ImportError:
         raise ImportError("Must have SALib installed to use this function")
 
     try:
         import polars as pl
-    except ImportError as e:
+    except ImportError:
         raise ImportError("Must have polars installed to use this function")
 
     sobol_dict = SobolSequenceConfig.build_sobol_dict(config)

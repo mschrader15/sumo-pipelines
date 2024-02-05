@@ -1,4 +1,3 @@
-import os
 import subprocess
 import sumolib
 
@@ -9,9 +8,10 @@ from .config import SimulationConfig
 import socket
 from contextlib import closing
 
+
 def find_free_port():
     with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-        s.bind(('', 0))
+        s.bind(("", 0))
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         return s.getsockname()[1]
 
@@ -30,8 +30,14 @@ def make_cmd(
                 config.net_file,
                 "-r",
                 ",".join(config.route_files),
-                "-a",
-                ",".join(list(map(str, config.additional_files))),
+                *(
+                    (
+                        "-a",
+                        ",".join(list(map(str, config.additional_files))),
+                    )
+                    if config.additional_files
+                    else []
+                ),
                 "--begin",
                 str(config.start_time),
                 "--end",
@@ -54,9 +60,7 @@ def run_sumo(config: SimulationConfig, parent_config: DictConfig) -> None:
         config (SimulationConfig): The configuration for the simulation.
     """
 
-    sumo_cmd = config.make_cmd(
-        config
-    )
+    sumo_cmd = config.make_cmd(config)
 
     if config.simulation_output:
         with open(config.simulation_output, "w") as f:
@@ -70,7 +74,9 @@ def run_sumo(config: SimulationConfig, parent_config: DictConfig) -> None:
         raise RuntimeError("Sumo failed to run")
 
 
-def run_sumo_socket_listeners(config: SimulationConfig, parent_config: DictConfig) -> None:
+def run_sumo_socket_listeners(
+    config: SimulationConfig, parent_config: DictConfig
+) -> None:
     """
     This is a standalone function that runs sumo and returns nothing.
 
@@ -79,13 +85,13 @@ def run_sumo_socket_listeners(config: SimulationConfig, parent_config: DictConfi
     Args:
         config (SimulationConfig): The configuration for the simulation.
     """
-    assert len(config.socket_listeners) == 1, "Only one socket listener is supported at this time"
-    
+    assert (
+        len(config.socket_listeners) == 1
+    ), "Only one socket listener is supported at this time"
+
     config.socket_listeners[0].config.port = find_free_port()
-    
-    sumo_cmd = config.make_cmd(
-        config
-    )
+
+    sumo_cmd = config.make_cmd(config)
 
     if config.simulation_output:
         with open(config.simulation_output, "w") as f:
@@ -94,7 +100,7 @@ def run_sumo_socket_listeners(config: SimulationConfig, parent_config: DictConfi
         s = subprocess.Popen(
             sumo_cmd,
         )
-        
+
     # test a socket listener
     config.socket_listeners[0].function(
         *config.socket_listeners[0].config.args,
@@ -111,6 +117,4 @@ def run_sumo_function(
     parent_config: DictConfig,
 ) -> None:
     # call the runner function
-    config.runner_function(
-        parent_config
-    )    
+    config.runner_function(parent_config)

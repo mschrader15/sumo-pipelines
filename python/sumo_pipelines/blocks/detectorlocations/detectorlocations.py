@@ -1,8 +1,7 @@
-from typing import List, Union
+from typing import List
 import sumolib
 import hydra
-from pathlib import Path
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import OmegaConf
 from outputs.detector_relationships import DetectorRelationships
 
 

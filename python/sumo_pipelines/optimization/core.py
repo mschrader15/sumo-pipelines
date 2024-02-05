@@ -1,11 +1,9 @@
 # function to wrap the target function for optimization
 from copy import deepcopy
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict
 from pathlib import Path
 
 from omegaconf import OmegaConf
-from ray.tune.logger import Logger
-from ray.tune.syncer import SyncConfig
 
 from sumo_pipelines.optimization.config import OptimizationConfig
 

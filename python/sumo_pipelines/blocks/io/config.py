@@ -1,8 +1,6 @@
-from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Any, List
 
-from omegaconf import DictConfig, ListConfig
 
 
 @dataclass
@@ -41,3 +39,21 @@ class RemoveFileConfig:
 
     rm_files: List[str]
 
+
+@dataclass
+class DuckDBColumn:
+    name: str
+    dtype: str
+    val: Any
+
+
+@dataclass
+class DuckDBConfig:
+    db_path: str
+    table_name: str
+    parquet_path: str
+    write_values: List[DuckDBColumn]
+
+
+# @dataclass
+# class DuckDB

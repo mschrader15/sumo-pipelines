@@ -1,3 +1,5 @@
+import fcntl
+import hashlib
 import concurrent.futures
 from concurrent.futures import ProcessPoolExecutor as ThreadPoolExecutor
 from pathlib import Path
@@ -21,3 +23,26 @@ def walk_directory(root_dir: Path, file_type: str = ".yaml") -> Generator[Pipeli
             result = future.result()
             if result is not None:
                 yield result
+
+
+
+# Ray Specific Mutex
+# from ray.util.queue import Queue
+
+
+class SystemMutex:
+
+    # from this madlad: https://github.com/ray-project/ray/issues/8017#issuecomment-657500234
+
+    def __init__(self, name):
+        self.name = name
+
+    def __enter__(self):
+        lock_id = hashlib.md5(self.name.encode('utf8')).hexdigest()
+        self.fp = open(f'/tmp/.lock-{lock_id}.lck', 'wb')
+        fcntl.flock(self.fp.fileno(), fcntl.LOCK_EX)
+
+    def __exit__(self, _type, value, tb):
+        fcntl.flock(self.fp.fileno(), fcntl.LOCK_UN)
+        self.fp.close()
+

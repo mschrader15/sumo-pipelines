@@ -1,5 +1,4 @@
 import os
-import click
 from pathlib import Path
 
 import ray
@@ -7,9 +6,7 @@ import ray
 # from functions.config import Root, parse_config_object
 # from functions.sumo import Runner, WandbRunner
 
-from ray import tune, air
-from ray.tune.search import SearchAlgorithm
-from ray.tune.schedulers import AsyncHyperBandScheduler, HyperBandScheduler
+from ray import tune
 
 import numpy as np
 import random

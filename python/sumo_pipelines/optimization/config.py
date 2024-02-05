@@ -3,9 +3,7 @@ from dataclasses import dataclass, field
 
 from dataclasses import MISSING
 
-from omegaconf import DictConfig
 
-from sumo_pipelines.optimization.utils import build_search_space, update_search_space
 from sumo_pipelines.config import MetaData, Pipeline, Blocks
 
 @dataclass
