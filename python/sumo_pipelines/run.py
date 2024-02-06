@@ -186,17 +186,15 @@ def run_queue_pipeline(
             )
             for i, consumer in enumerate(pipeline.consumers)
         ],
-        parallel=False,
+        parallel=True,
     )
 
-    ray.get(prod_ref)
-
     procs = [
-        # consumer.remote(deepcopy(config), queue)
-        consumer(deepcopy(config), queue)
+        consumer.remote(deepcopy(config), queue)
+        # consumer(deepcopy(config), queue)
         for _ in range((pipeline.number_of_workers - 1))
     ]
 
-    ray.get(procs)
+    ray.get([prod_ref, *procs])
 
     queue.shutdown()
