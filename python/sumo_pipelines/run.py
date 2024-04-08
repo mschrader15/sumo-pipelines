@@ -32,7 +32,10 @@ def _config_handler(
         else config
     )
 
-    c.Blocks.SimulationConfig.gui = gui
+    try:
+        c.Blocks.SimulationConfig.gui = gui
+    except:
+        pass
 
     if replay:
         return replay_pipeline(

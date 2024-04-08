@@ -1,0 +1,20 @@
+XMLConvertConfig:
+  source: ${Metadata.cwd}/fcd.out.xml.gz
+  target: ${Metadata.cwd}/fcd.out.parquet
+  delete_source: true
+  elements:
+    - name: timestep
+      attributes:
+        - time
+    - name: vehicle
+      attributes:
+        - id
+        - x
+        - y
+        - z
+        - angle
+        - type
+        - speed
+        - pos
+        - lane
+        - slope

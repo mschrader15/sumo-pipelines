@@ -40,6 +40,20 @@ def update_parent_from_yaml(p, *, _parent_: DictConfig):
     # specian key to load a yaml
     del _parent_["yaml"]
 
+def standard_conf(p: str, *,  _parent_: DictConfig):
+    # get the path to the standard config
+    root = Path(__file__).parent.parent
+
+    # split the dot path
+    file_path = "/".join(p.split(".")) + ".yaml"
+
+    path = (root / 'configurations' / 'standard' ).joinpath(file_path)
+
+    c = OmegaConf.load(path)    
+
+    # pop the top level
+    _parent_.config = c[list(c.keys())[0]]
+
 
 def create_custom_resolvers():
     try:
@@ -80,6 +94,12 @@ def create_custom_resolvers():
         OmegaConf.register_new_resolver(
             "int",
             lambda x: int(x),
+        )
+
+        OmegaConf.register_new_resolver(
+            "standard_conf",
+            standard_conf,
+            # use_cache=True
         )
 
     except Exception as e:
