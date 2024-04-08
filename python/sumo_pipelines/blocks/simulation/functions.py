@@ -95,7 +95,7 @@ def run_sumo_socket_listeners(
 
     if config.simulation_output:
         with open(config.simulation_output, "w") as f:
-            s = subprocess.Popen(sumo_cmd, check=True, stdout=f, stderr=f)
+            s = subprocess.Popen(sumo_cmd, stdout=f, stderr=f)
     else:
         s = subprocess.Popen(
             sumo_cmd,

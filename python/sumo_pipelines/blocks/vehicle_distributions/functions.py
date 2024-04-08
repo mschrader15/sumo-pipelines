@@ -7,70 +7,63 @@ from .config import (
     MultiTypeCFConfig,
     SimpleCFConfig,
     SampledSimpleCFConfig,
-    CFAddParamsConfig
+    CFAddParamsConfig,
 )
 
-try:
-    import pandas as pd
+import polars as pl
+import pandas as pd
 
-    pandas_not_installed = False
-except ImportError:
-    pandas_not_installed = True
-
+pandas_not_installed = False
 
 DUMB_OBJECT_STORE = {}
 
 
-def create_distribution_pandas(
+def create_distribution_table(
     cf_config: CFTableConfig,
     config: DictConfig,
 ) -> None:
-    if pandas_not_installed:
-        raise ImportError(
-            "pandas is not installed. Please install it to use this block."
-        )
-
     if cf_config.table in DUMB_OBJECT_STORE:
-        samples = DUMB_OBJECT_STORE[cf_config.table].copy()
+        samples = DUMB_OBJECT_STORE[cf_config.table].clone()
     else:
-        samples = pd.read_csv(
+        samples = pl.read_parquet(
             cf_config.table,
         )
+
+        if cf_config.write_parameters:
+            samples = samples.select(cf_config.write_parameters)
+
         DUMB_OBJECT_STORE[cf_config.table] = samples
 
-    samples = samples.rename(columns=cf_config.cf_params).sample(
-        cf_config.num_samples, random_state=cf_config.seed, replace=True
+    write_columns = cf_config.write_parameters or samples.columns
+
+    sampled_df = samples.sample(
+        n=cf_config.num_samples, seed=cf_config.seed, with_replacement=True
     )
-    # add the vehicle type
-    vehicles = []
-    i = 0
 
-    # add the vehicle type
-    vehicles = []
-    i = 0
-
-    def create_veh_type(row: pd.Series) -> None:
-        nonlocal i
-        vehicles.append(
-            f'\t<vType id="{cf_config.vehicle_distribution_name}_{i}" '
-            + " ".join(['{}="{}"'.format(k, str(v)) for k, v in row.items()])
-            + " "
-            + " ".join(
-                [
-                    '{}="{}"'.format(k, str(v))
-                    for k, v in cf_config.additional_params.items()
-                ]
-            )
-            + "/>"
+    write_text = sampled_df.with_row_index(name="id").with_columns(
+        pl.col(pl.FLOAT_DTYPES).round(3)
+    ).select(
+        pl.concat_str(
+            (
+                pl.format(
+                    f'\t\t<vType id="{cf_config.vehicle_distribution_name}_' + '{}"',
+                    pl.col("id"),
+                ),
+                *(
+                    pl.format('{}="{}"', pl.lit(col).alias(col), pl.col(col))
+                    for col in write_columns
+                ),
+                pl.lit("/>"),
+            ),
+            separator=" ",
         )
-        i += 1
-
-    samples.apply(create_veh_type, axis=1)
+        .str.concat("\n")
+        .alias("out")
+    )["out"][0]
 
     with open(cf_config.save_path, "w") as f:
         f.write(f'<vTypeDistribution id="{cf_config.vehicle_distribution_name}" >\n')
-        for v in vehicles:
-            f.write(v + "\n")
+        f.write(write_text)
         f.write("</vTypeDistribution>")
 
 
@@ -229,7 +222,7 @@ def merge_veh_distributions(
     doc = ET.ElementTree(ET.fromstring("<additional/>"))
     root = doc.getroot()
     dist = ET.Element("vTypeDistribution", attrib={"id": config.distribution_name})
-    
+
     all_vtypes = []
     for i, file_ in enumerate(config.files):
         tree = ET.parse(file_)
@@ -242,11 +235,10 @@ def merge_veh_distributions(
     doc.write(config.output_path, pretty_print=True)
 
 
-
 def _custom_to_xml(
-        df: pd.DataFrame, 
-        file_path: str,
-        elem_cols: List[str],
+    df: pd.DataFrame,
+    file_path: str,
+    elem_cols: List[str],
 ):
     import lxml.etree as etree
 
@@ -255,10 +247,10 @@ def _custom_to_xml(
 
     attr_cols = list(df.columns.difference(elem_cols))
     elem_cols = elem_cols
-    
+
     # these are constant
     root_name = "vTypeDistribution"
-    dist_name = data['id']
+    dist_name = data["id"]
     row_name = "vType"
     param_name = "param"
 
@@ -276,7 +268,6 @@ def _custom_to_xml(
                 # for col in elem_cols:
                 elem_elem.set("key", elem)
                 elem_elem.set("value", str(row[elem]))
-
 
     tree = etree.ElementTree(root)
     tree.write(file_path, pretty_print=True, xml_declaration=True, encoding="utf-8")
@@ -299,18 +290,14 @@ def update_veh_distribution(
         df[param.name] = None
         _df = df
         for filt in param.filters:
-            filt.value = f'"{filt.value}"' if isinstance(filt.value, str) else filt.value
+            filt.value = (
+                f'"{filt.value}"' if isinstance(filt.value, str) else filt.value
+            )
             _df = _df.query(f"{filt.param} == {filt.value}")
-        
+
         ind = _df.sample(
             frac=param.percent,
         ).index
         df.loc[ind, param.name] = param.value
 
-    _custom_to_xml(df, 
-                   cf_config.save_path, 
-                   [c.name for c in cf_config.params])
-
-
-
-
+    _custom_to_xml(df, cf_config.save_path, [c.name for c in cf_config.params])

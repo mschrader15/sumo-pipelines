@@ -180,7 +180,8 @@ def tat_step_3(
         )
         .filter(
             (
-                pl.col(time_column) != pl.col(f"{time_column}_right")
+                pl.col(time_column)
+                != pl.col(f"{time_column}_right")
                 # | (pl.col(f"{time_column}_right").is_null())
             )
         )

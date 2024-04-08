@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Any, List
 from dataclasses import dataclass, field
 
-from omegaconf import MISSING, DictConfig
+from omegaconf import MISSING
 
 
 @dataclass
@@ -22,14 +22,19 @@ class PostProcessingGEHConfig:
 class USDOTCalibrationConfig:
     sim_file: Path
     calibrate_file: Path
-    output_file: Path
     start_time: str
-    sim_file_functions: Any = None,
-    join_on_cols: List[str] = field(default_factory=lambda: list(['tl', 'detector_id', ]))
+    sim_file_functions: Any = (None,)
+    join_on_cols: List[str] = field(
+        default_factory=lambda: list(
+            [
+                "tl",
+                "detector_id",
+            ]
+        )
+    )
     agg_interval: int = 900
-    target_col: str = 'volume'
+    target_col: str = "volume"
     calibration_passed: bool = MISSING
     warmup: Any = "${Blocks.SimulationConfig.warmup_time}"
-    sql_expression: str = ''
-    # calibrate_detectors: List[Any] = field(default_factory=lambda: DEFAULT_DETECTORS)
-
+    sql_expression: str = ""
+    output_file: str = ""
