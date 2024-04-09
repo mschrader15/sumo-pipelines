@@ -1,7 +1,7 @@
 from copy import deepcopy
 from typing import Generator
 from sumo_pipelines.config import PipelineConfig
-from ray.util.queue import Queue
+from ray.util.queue import Queue, Empty
 from omegaconf import OmegaConf
 
 
@@ -9,11 +9,14 @@ def unpack_queue(
     q: Queue,
     config: PipelineConfig,
 ) -> Generator[PipelineConfig, None, None]:
-    while q.actor is not None:
-        item = q.get()
-        if item is None:
+    
+    while (not q.empty()):
+        try:
+            item = q.get_nowait()
+        except Empty():
+            print("Queue is empty")
             break
-
+        
         # copy the config
         new_config = deepcopy(config)
 
@@ -23,4 +26,3 @@ def unpack_queue(
 
         yield new_config
 
-    return

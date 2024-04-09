@@ -31,6 +31,7 @@ class PipeBlock:
     parallel: bool = field(default=False)
     number_of_workers: Union[str, int] = field(default="auto")
     queue_based: bool = field(default=False)
+    result_handler: Optional[PipePiece] = field(default=None)
 
 
 @dataclass

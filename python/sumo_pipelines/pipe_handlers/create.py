@@ -94,9 +94,9 @@ def persistent_producer(
             *args,
             **kwargs,
         )
-    
 
     return _persistent_producer
+
 
 def create_consumers(
     function_n_configs: List[Tuple[str, List[str]]],
@@ -124,16 +124,19 @@ def create_consumers(
         @ray.remote(
             num_cpus=1,
             runtime_env={
-                'env_vars': {
+                "env_vars": {
                     "PYTHONPATH": os.environ.get("PYTHONPATH", ""),
                 }
-            }
+            },
         )
         def consumer(main_config, *args, **kwargs):
             create_custom_resolvers()
 
             for f, dotpath in func:
-                f(OmegaConf.select(main_config, dotpath), main_config, *args, **kwargs)
+                res = f(
+                    OmegaConf.select(main_config, dotpath), main_config, *args, **kwargs
+                )
+            return res
     else:
 
         def consumer(main_config, *args, **kwargs):

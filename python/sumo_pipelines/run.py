@@ -9,6 +9,8 @@ from sumo_pipelines.pipe_handlers.create import persistent_producer
 from sumo_pipelines.utils.config_helpers import open_config_structured
 from sumo_pipelines.pipe_handlers import create_consumers, recursive_producer
 
+from sumo_pipelines.pipe_handlers.create import load_function
+
 try:
     import ray
     from ray.util.queue import Queue
@@ -120,7 +122,15 @@ def run_pipeline(
                     ],
                 )(c)
             ]
-            ray.get(procs)
+            res = ray.get(procs)
+
+            if pipeline.result_handler is not None:
+                # run the result handler
+                load_function(pipeline.result_handler.function)(
+                    pipeline.result_handler.config, c, res
+                )
+
+            # pl.DataFrame
 
         else:
             consumer = create_consumers(
@@ -177,6 +187,7 @@ def run_queue_pipeline(
     )
 
     prod_ref = producer.remote(config, queue)
+    ray.get(prod_ref)
 
     consumer = create_consumers(
         [
@@ -195,6 +206,8 @@ def run_queue_pipeline(
         for _ in range((pipeline.number_of_workers - 1))
     ]
 
-    ray.get([prod_ref, *procs])
+    ray.get([*procs])
+
+    print("Queue is empty")
 
     queue.shutdown()
