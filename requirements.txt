@@ -4,3 +4,4 @@ sumolib
 omegaconf
 pyarrow
 polars
+cachetools
