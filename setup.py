@@ -139,11 +139,10 @@ setup(
     version="1.1.6",
     author="Max Schrader",
     author_email="mschrader15@gmail.com",
-    packages=find_packages(include="sumo_pipelines"),
+    packages=find_packages(),
     install_requires=read_requirements(),
     ext_modules=[CMakeExtension("_sumo_pipelines")],
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
     extras_require={"test": ["pytest>=6.0"]},
-    # python_requires=">=3.7",
 )

@@ -5,10 +5,18 @@ import os
 import sys
 from concurrent.futures import ProcessPoolExecutor as ThreadPoolExecutor
 from pathlib import Path
-from typing import Generator
+from typing import TYPE_CHECKING, Generator
 
-from sumo_pipelines.config import PipelineConfig
 from sumo_pipelines.utils.config_helpers import open_completed_config
+
+if TYPE_CHECKING:
+    from sumo_pipelines.config import PipelineConfig
+
+try:  # pragma: no cover
+    from sumo_pipelines.config import PipelineConfig
+
+except ImportError:
+    from sumo_pipelines._config_stubs import PipelineConfig
 
 
 def open_config_file(

@@ -82,14 +82,14 @@ def run_sumo_fast_fcd(config: SimulationConfig, parent_config: DictConfig) -> No
     Args:
         config (SimulationConfig): The configuration for the simulation.
     """
-    from sumo_pipelines_cpp import traci_vehicle_state_runner
+    from sumo_pipelines.cpp import traci_vehicle_state_runner
 
     # find the following commands in the command line list
     # "--fcd-output" and the output file
 
     sumo_cmd = config.make_cmd(config)
 
-    ind = sumo_cmd.find("--fcd-output")
+    ind = sumo_cmd.index("--fcd-output")
     if ind == -1:
         raise ValueError("No fcd-output flag found in sumo command")
 

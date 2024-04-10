@@ -9,6 +9,7 @@ import ray
 # from functions.sumo import Runner, WandbRunner
 from ray import tune
 
+from sumo_pipelines.optimization.config import OptimizationConfig
 from sumo_pipelines.optimization.core import (
     handle_results,
     target_wrapper,
@@ -18,8 +19,6 @@ from sumo_pipelines.utils.config_helpers import (
     create_custom_resolvers,
     open_config_structured,
 )
-
-from .config import OptimizationConfig
 
 try:
     from ray.air.integrations.wandb import WandbLoggerCallback

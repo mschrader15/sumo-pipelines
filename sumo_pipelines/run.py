@@ -6,7 +6,6 @@ from typing import List, Union
 from sumo_pipelines.config import PipeBlock, PipelineConfig
 from sumo_pipelines.pipe_handlers import create_consumers, recursive_producer
 from sumo_pipelines.pipe_handlers.create import load_function, persistent_producer
-from sumo_pipelines.utils.config_helpers import open_config_structured
 
 try:
     import ray
@@ -22,6 +21,8 @@ except ImportError:
 def _config_handler(
     config: Union[Path, List[Path], PipelineConfig], gui: bool, replay: bool
 ) -> PipelineConfig:
+    from sumo_pipelines.utils.config_helpers import open_config_structured
+
     c = (
         open_config_structured(
             config,

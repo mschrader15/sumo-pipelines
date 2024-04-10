@@ -4,13 +4,23 @@ import sys
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
-from typing import List, Union
+from typing import TYPE_CHECKING, List, Union
 
 from omegaconf import DictConfig, ListConfig, OmegaConf
 
-from sumo_pipelines.config import PipelineConfig
-from sumo_pipelines.optimization.config import OptimizationConfig
 from sumo_pipelines.pipe_handlers import load_function
+
+if TYPE_CHECKING:
+    from sumo_pipelines.config import PipelineConfig
+    from sumo_pipelines.optimization.config import OptimizationConfig
+
+try:  # pragma: no cover
+    from sumo_pipelines.config import PipelineConfig
+    from sumo_pipelines.optimization.config import OptimizationConfig
+
+except ImportError:
+    from sumo_pipelines._config_stubs import OptimizationConfig, PipelineConfig
+
 
 # Kept outside simple_eval() just for performance
 _re_simple_eval = re.compile(rb"d([\x00-\xFF]+)S\x00")
@@ -129,7 +139,7 @@ def open_config(
     """Open a config file and return a DictConfig object"""
     create_custom_resolvers()
 
-    # time_ = datetime.now().strftime("%m.%d.%Y_%H.%M.%S")
+    from sumo_pipelines.config import PipelineConfig
 
     s = OmegaConf.structured(PipelineConfig) if structured is None else structured
     c = OmegaConf.load(
@@ -154,6 +164,8 @@ def open_completed_config(
     path: Path, validate: bool = True
 ) -> Union[PipelineConfig, OptimizationConfig]:
     """Open a config file and return a DictConfig object"""
+    from sumo_pipelines.config import PipelineConfig
+
     try:
         create_custom_resolvers()
     except Exception:
@@ -207,6 +219,8 @@ def open_config_structured(
 
     This allows for the config to contain functions
     """
+    from sumo_pipelines.config import PipelineConfig
+    from sumo_pipelines.optimization.config import OptimizationConfig
 
     try:
         OmegaConf.register_new_resolver(
