@@ -1,6 +1,6 @@
 import socket
 import subprocess
-from contextlib import closing
+from contextlib import closing, redirect_stdout
 
 import sumolib
 from omegaconf import DictConfig
@@ -82,19 +82,30 @@ def run_sumo_fast_fcd(config: SimulationConfig, parent_config: DictConfig) -> No
     Args:
         config (SimulationConfig): The configuration for the simulation.
     """
+    from sumo_pipelines import traci_vehicle_state_runner
+
+    # find the following commands in the command line list
+    # "--fcd-output" and the output file
 
     sumo_cmd = config.make_cmd(config)
 
+    ind = sumo_cmd.find("--fcd-output")
+    if ind == -1:
+        raise ValueError("No fcd-output flag found in sumo command")
+
+    # get the output file
+    sumo_cmd.pop(ind)
+    output_file = sumo_cmd.pop(ind)
+
     if config.simulation_output:
         with open(config.simulation_output, "w") as f:
-            s = subprocess.run(sumo_cmd, check=True, stdout=f, stderr=f)
+            with redirect_stdout(f):
+                traci_vehicle_state_runner(sumo_cmd, config.warmup_time, output_file)
     else:
-        s = subprocess.run(
+        traci_vehicle_state_runner(
             sumo_cmd,
+            config.warmup_time,
         )
-
-    if s.returncode != 0:
-        raise RuntimeError("Sumo failed to run")
 
 
 def run_sumo_socket_listeners(

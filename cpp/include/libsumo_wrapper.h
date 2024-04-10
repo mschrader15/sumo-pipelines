@@ -30,8 +30,8 @@ std::shared_ptr<parquet::schema::GroupNode> GetFCDOutputSchema() {
         parquet::ConvertedType::UTF8));
 
     fields.push_back(parquet::schema::PrimitiveNode::Make(
-        "time", parquet::Repetition::REQUIRED, parquet::Type::INT64,
-        parquet::ConvertedType::UINT_64));
+        "time", parquet::Repetition::REQUIRED, parquet::Type::DOUBLE,
+        parquet::ConvertedType::NONE));
 
     fields.push_back(parquet::schema::PrimitiveNode::Make(
         "speed", parquet::Repetition::REQUIRED, parquet::Type::DOUBLE,
@@ -79,7 +79,7 @@ public:
 
     };
 
-    inline void writeRow(const std::string& id, const int64_t time) {
+    inline void writeRow(const std::string& id, const double time) {
         const auto& pos = libsumo::Vehicle::getPosition(id);
         writer_ << id << static_cast<uint64_t>(time) << libsumo::Vehicle::getSpeed(id) << libsumo::Vehicle::getAcceleration(id) << pos.x << pos.y << libsumo::Vehicle::getFuelConsumption(id) << libsumo::Vehicle::getLaneID(id) << parquet::EndRow;
     }
