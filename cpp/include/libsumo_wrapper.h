@@ -18,10 +18,6 @@
 
 #pragma once
 
-template <typename T>
-
-using optional = parquet::StreamReader::optional<T>;
-
 std::shared_ptr<parquet::schema::GroupNode> GetFCDOutputSchema() {
     parquet::schema::NodeVector fields;
 

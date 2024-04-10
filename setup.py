@@ -145,4 +145,5 @@ setup(
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
     extras_require={"test": ["pytest>=6.0"]},
+    package_data={'sumo_pipelines': ['*.yaml']}
 )
