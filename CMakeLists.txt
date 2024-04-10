@@ -9,9 +9,11 @@ set(SUMO_HOME "$ENV{SUMO_HOME}")
 # set(libsumo_DIR "${SUMO_HOME}/bin")
 
 # Find the Arrow package
+add_subdirectory(extern/pybind11)
+
 find_package(Arrow REQUIRED)
 find_library(SUMOCPP sumocpp)
-find_package(pybind11 REQUIRED)
+# find_package(pybind11 REQUIRED)
 
 # Include directories
 include_directories("${SUMO_HOME}/src")
