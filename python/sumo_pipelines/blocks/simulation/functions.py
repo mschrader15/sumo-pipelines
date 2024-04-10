@@ -1,12 +1,11 @@
+import socket
 import subprocess
-import sumolib
+from contextlib import closing
 
+import sumolib
 from omegaconf import DictConfig
 
 from .config import SimulationConfig
-
-import socket
-from contextlib import closing
 
 
 def find_free_port():
@@ -51,6 +50,30 @@ def make_cmd(
 
 
 def run_sumo(config: SimulationConfig, parent_config: DictConfig) -> None:
+    """
+    This is a standalone function that runs sumo and returns nothing.
+
+    It is multi-process safe. You must make sure that files do not conflict if multi-processing.
+
+    Args:
+        config (SimulationConfig): The configuration for the simulation.
+    """
+
+    sumo_cmd = config.make_cmd(config)
+
+    if config.simulation_output:
+        with open(config.simulation_output, "w") as f:
+            s = subprocess.run(sumo_cmd, check=True, stdout=f, stderr=f)
+    else:
+        s = subprocess.run(
+            sumo_cmd,
+        )
+
+    if s.returncode != 0:
+        raise RuntimeError("Sumo failed to run")
+
+
+def run_sumo_fast_fcd(config: SimulationConfig, parent_config: DictConfig) -> None:
     """
     This is a standalone function that runs sumo and returns nothing.
 
