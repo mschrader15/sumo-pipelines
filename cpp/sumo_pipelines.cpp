@@ -1,10 +1,4 @@
 #include <iostream>
-#include <arrow/io/api.h>
-#include <arrow/ipc/api.h>
-#include <arrow/pretty_print.h>
-#include <arrow/result.h>
-#include <arrow/status.h>
-#include <arrow/table.h>
 #include <libsumo/libsumo.h>
 #include <cmath>
 #ifndef __INTELLISENSE__ // code that generates an error squiggle
@@ -14,8 +8,6 @@
 
 #include "include/libsumo_wrapper.h"
 
-
-#define ARROW_WITH_ZSTD
 
 using namespace libsumo;
 #ifndef __INTELLISENSE__ // code that generates an error squiggle

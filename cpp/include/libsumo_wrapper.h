@@ -15,6 +15,7 @@
 #include <parquet/stream_reader.h>
 #include <parquet/stream_writer.h>
 
+#define ARROW_WITH_ZSTD
 
 #pragma once
 
