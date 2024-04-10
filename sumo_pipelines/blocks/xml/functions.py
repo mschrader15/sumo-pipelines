@@ -8,10 +8,8 @@ import pyarrow.parquet as pq
 import sumolib
 from omegaconf import DictConfig
 
-from sumo_pipelines.sumo_pipelines_rs import parse_emissions_xml
-
+# from sumo_pipelines.sumo_pipelines_rs import parse_emissions_xml
 from .config import (
-    EmissionXMLtoParquetConfig,
     XMLChangeOutputConfig,
     XMLConvertConfig,
     XMLSimpleRegexConfig,
@@ -137,13 +135,13 @@ def convert_xml_to_parquet_pandas(config: XMLConvertConfig, *args, **kwargs) -> 
         Path(config.source).unlink()
 
 
-def convert_emissions_xml_to_parquet(
-    config: EmissionXMLtoParquetConfig, *args, **kwargs
-) -> None:
-    parse_emissions_xml(config.input_file, config.output_file)
+# def convert_emissions_xml_to_parquet(
+#     config: EmissionXMLtoParquetConfig, *args, **kwargs
+# ) -> None:
+#     parse_emissions_xml(config.input_file, config.output_file)
 
-    if config.remove_input:
-        Path(config.input_file).unlink()
+#     if config.remove_input:
+#         Path(config.input_file).unlink()
 
 
 # if __name__ == "__main__":

@@ -97,6 +97,9 @@ def run_sumo_fast_fcd(config: SimulationConfig, parent_config: DictConfig) -> No
     sumo_cmd.pop(ind)
     output_file = sumo_cmd.pop(ind)
 
+    if not (output_file.endswith(".parquet") or output_file.endswith(".prq")):
+        raise ValueError("Output file must be a parquet file")
+
     if config.simulation_output:
         with open(config.simulation_output, "w") as f:
             with redirect_stdout(f):
