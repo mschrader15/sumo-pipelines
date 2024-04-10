@@ -1,7 +1,8 @@
-ray[tune]
-pandas
-sumolib
-omegaconf
-pyarrow
-polars
 cachetools
+lxml
+omegaconf
+pandas
+polars
+pyarrow
+ray[tune]
+sumolib

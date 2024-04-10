@@ -49,7 +49,7 @@ void traci_vehicle_state_runner(const std::vector<std::string>& simulation_start
 
 #ifndef __INTELLISENSE__ // code that generates an error squiggle
 
-PYBIND11_MODULE(sumo_pipelines, m) {
+PYBIND11_MODULE(_sumo_pipelines, m) {
     m.def("traci_vehicle_state_runner", &traci_vehicle_state_runner, "Run SUMO simulation and collect vehicle states",
         py::arg("simulation_start"), py::arg("warmup_time"), py::arg("fcd_output_file"));
 }

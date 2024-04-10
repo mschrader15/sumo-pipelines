@@ -1,15 +1,15 @@
 from dataclasses import dataclass
+
 from omegaconf import OmegaConf
 
-from sumo_pipelines.config import MetaData
+from sumo_pipelines.blocks.producers.config import (
+    SobolItem,
+    SobolSequenceConfig,
+)
 from sumo_pipelines.blocks.producers.functions import (
     generate_sobol_sequence,
 )
-from sumo_pipelines.blocks.producers.config import (
-    SobolSequenceConfig,
-    SobolItem,
-)
-
+from sumo_pipelines.config import MetaData
 
 
 def test_sobol() -> None:
