@@ -1,6 +1,8 @@
 cachetools
 click
 lxml
+numba
+numpy
 omegaconf
 pandas
 polars

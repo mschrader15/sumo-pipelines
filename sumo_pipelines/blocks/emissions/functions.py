@@ -2,6 +2,10 @@ import mmap
 import re
 from pathlib import Path
 
+import numpy as np
+
+from sumo_pipelines.utils.geo_helpers import get_polygon, is_inside_sm_parallel
+
 # from sumo_pipelines.utils.geo_helpers import is_inside_sm_parallel
 # from sumo_pipelines.sumo_pipelines_rs import (
 #     is_inside_sm_parallel_py as is_inside_sm_parallel,
@@ -28,19 +32,6 @@ def pattern_matcher(eclass_regex: str) -> re.Pattern:
     return re.compile(
         rb'id="(.+?)" eclass="\w+\/(\w+?)".+fuel="([\d\.]*)".+x="([\d\.]*)" y="([\d\.]*)"'
     )
-
-
-def get_polygon(config):
-    if config.polygon_file:
-        from sumolib.shapes import polygon
-
-        assert Path(config.polygon_file).exists(), "The polygon file does not exist"
-
-        polygons = polygon.read(config.polygon_file)
-        assert len(polygons) == 1, "The polygon file should only contain one polygon"
-
-        return polygons[0].shape
-    return None
 
 
 def get_time_indices(config, data):
@@ -105,46 +96,46 @@ def save_to_file(config, fc_t, cars_total):
         f.write(f"{fc_t!s},{cars_total}")
 
 
-# def fast_total_energy(
-#     config: FuelTotalConfig,
-#     *args,
-#     **kwargs,
-# ) -> float:
-#     """
-#     This function reads the emissions xml file and returns the total energy consumption in MJ in the time range.
+def fast_total_energy(
+    config: FuelTotalConfig,
+    *args,
+    **kwargs,
+) -> float:
+    """
+    This function reads the emissions xml file and returns the total energy consumption in MJ in the time range.
 
 
-#     Args:
-#         config (FuelTotalConfig): _description_
+    Args:
+        config (FuelTotalConfig): _description_
 
-#     Returns:
-#         float: _description_
-#     """
-#     polygon = get_polygon(config)
+    Returns:
+        float: _description_
+    """
+    polygon = get_polygon(config)
 
-#     fc_t = 0
-#     with open(config.emissions_xml, "r+") as f:
-#         data = mmap.mmap(f.fileno(), 0)
-#         time_low_i, time_high_i = get_time_indices(config, data)
+    fc_t = 0
+    with open(config.emissions_xml, "r+") as f:
+        data = mmap.mmap(f.fileno(), 0)
+        time_low_i, time_high_i = get_time_indices(config, data)
 
-#         all_vehicles, position_vec, fuel_vec = get_fuel_and_position_vec(
-#             data,
-#             time_low_i,
-#             time_high_i,
-#         )
+        all_vehicles, position_vec, fuel_vec = get_fuel_and_position_vec(
+            data,
+            time_low_i,
+            time_high_i,
+        )
 
-#         if polygon:
-#             is_inside = is_inside_sm_parallel(position_vec, polygon)
-#             fuel_vec = np.array(fuel_vec)[is_inside]
-#             all_vehicles = np.array(all_vehicles)[is_inside]
+        if polygon:
+            is_inside = is_inside_sm_parallel(position_vec, polygon)
+            fuel_vec = np.array(fuel_vec)[is_inside]
+            all_vehicles = np.array(all_vehicles)[is_inside]
 
-#         fc_t = fuel_vec.sum() * config.sim_step
-#         cars_total = np.unique(all_vehicles).shape[0]
+        fc_t = fuel_vec.sum() * config.sim_step
+        cars_total = np.unique(all_vehicles).shape[0]
 
-#     config.total_energy = float(fc_t)
-#     config.total_vehicles = cars_total
+    config.total_energy = float(fc_t)
+    config.total_vehicles = cars_total
 
-#     delete_xml(config)
+    delete_xml(config)
 
 
 def fast_timestep_energy(
