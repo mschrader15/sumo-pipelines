@@ -44,6 +44,7 @@ class ParamConfig:
     bounds: List = field(default_factory=list)
     val: Optional[Any] = field(default=None)
     is_attr: bool = False
+    transform: str = ""
 
 
 @dataclass
