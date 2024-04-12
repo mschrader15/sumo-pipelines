@@ -4,8 +4,9 @@ from pathlib import Path
 from typing import Any, Callable, Dict
 
 from omegaconf import OmegaConf
-from ray import tune
+from ray import train, tune
 
+# from ray.air
 from sumo_pipelines.optimization.config import OptimizationConfig
 from sumo_pipelines.pipe_handlers.create import execute_pipe_block, get_pipeline_by_name
 from sumo_pipelines.utils.config_helpers import create_custom_resolvers
@@ -28,8 +29,10 @@ def target_wrapper(
         local_global_config = OmegaConf.create(deepcopy(global_config))
 
         # update with the ray convention
-        local_global_config.Metadata.run_id = tune.get_trial_id()
-        local_global_config.Metadata.cwd = tune.get_trial_dir()
+        context = train.get_context()
+        local_global_config.Metadata.run_id = context.get_trial_id()
+        local_global_config.Metadata.cwd = context.get_trial_dir()
+        # local_global_config.Metadata.cwd =
 
         # update the config with the ray dictionary
         local_global_config.Optimization.SearchSpace.update_function(
@@ -45,11 +48,9 @@ def target_wrapper(
         res = local_global_config.Optimization.ObjectiveFn.function(
             *args,
             config=local_global_config,
+            function_config=local_global_config.Optimization.ObjectiveFn.config,
             **kwargs,
         )
-
-        tune.get_trial_name()
-        tune.get_trial_dir()
 
         # try to execute the cleanup pipeline
         block = get_pipeline_by_name(local_global_config, "Cleanup")

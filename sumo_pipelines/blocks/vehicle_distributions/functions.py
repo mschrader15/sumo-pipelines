@@ -1,7 +1,9 @@
 from typing import List
 
+import numpy as np
 import pandas as pd
 import polars as pl
+import scipy.stats as stats
 from omegaconf import DictConfig
 
 from .config import (
@@ -9,6 +11,7 @@ from .config import (
     CFTableConfig,
     MergeVehDistributionsConfig,
     MultiTypeCFConfig,
+    ParamConfig,
     SampledSimpleCFConfig,
     SimpleCFConfig,
 )
@@ -16,6 +19,38 @@ from .config import (
 pandas_not_installed = False
 
 DUMB_OBJECT_STORE = {}
+
+
+def _create_distribution_table(
+    df: pl.DataFrame, distribution_name: str, write_columns: List[str], save_path: str
+) -> None:
+    write_text = (
+        df.with_row_index(name="id")
+        .with_columns(pl.col(pl.FLOAT_DTYPES).round(3))
+        .select(
+            pl.concat_str(
+                (
+                    pl.format(
+                        f'\t\t<vType id="{distribution_name}_' + '{}"',
+                        pl.col("id"),
+                    ),
+                    *(
+                        pl.format('{}="{}"', pl.lit(col).alias(col), pl.col(col))
+                        for col in write_columns
+                    ),
+                    pl.lit("/>"),
+                ),
+                separator=" ",
+            )
+            .str.concat("\n")
+            .alias("out")
+        )["out"][0]
+    )
+
+    with open(save_path, "w") as f:
+        f.write(f'<vTypeDistribution id="{distribution_name}" >\n')
+        f.write(write_text)
+        f.write("</vTypeDistribution>")
 
 
 def create_distribution_table(
@@ -34,40 +69,16 @@ def create_distribution_table(
 
         DUMB_OBJECT_STORE[cf_config.table] = samples
 
-    write_columns = cf_config.write_parameters or samples.columns
-
     sampled_df = samples.sample(
         n=cf_config.num_samples, seed=cf_config.seed, with_replacement=True
     )
 
-    write_text = (
-        sampled_df.with_row_index(name="id")
-        .with_columns(pl.col(pl.FLOAT_DTYPES).round(3))
-        .select(
-            pl.concat_str(
-                (
-                    pl.format(
-                        f'\t\t<vType id="{cf_config.vehicle_distribution_name}_'
-                        + '{}"',
-                        pl.col("id"),
-                    ),
-                    *(
-                        pl.format('{}="{}"', pl.lit(col).alias(col), pl.col(col))
-                        for col in write_columns
-                    ),
-                    pl.lit("/>"),
-                ),
-                separator=" ",
-            )
-            .str.concat("\n")
-            .alias("out")
-        )["out"][0]
+    _create_distribution_table(
+        sampled_df,
+        config.vehicle_distribution_name,
+        write_columns=config.write_columns,
+        save_path=cf_config.save_path,
     )
-
-    with open(cf_config.save_path, "w") as f:
-        f.write(f'<vTypeDistribution id="{cf_config.vehicle_distribution_name}" >\n')
-        f.write(write_text)
-        f.write("</vTypeDistribution>")
 
 
 def create_independent_distribution_pandas(
@@ -133,15 +144,15 @@ def create_simple_distribution(
 
 
 def _parse_num_samples(num_samples: str) -> int:
-    import random
     import re
 
     if isinstance(num_samples, (int, float)):
         return int(num_samples)
 
     if "uniform" in num_samples:
-        y = eval(num_samples.strip("uniform"))
-        return int(random.uniform(y[0], y[1]))
+        raise NotImplementedError("Uniform sampling not implemented")
+        # y = eval(num_samples.strip("uniform"))
+        # return int(random.uniform(y[0], y[1]))
 
     if " - " in num_samples:
         # use regex to get the numbers
@@ -177,6 +188,75 @@ def create_simple_sampled_distribution(
     # open an xml dom for writing at the save path
     dist_creator.to_xml(
         cf_config.save_path,
+    )
+
+
+def _sample_dist(param: ParamConfig, n: int) -> np.array:
+    dist = getattr(
+        stats,
+        param.distribution,
+    )(**param.params)
+
+    # first fast pass
+    vals = dist.rvs(n)
+    if param.bounds:
+
+        def get_ob() -> np.array:
+            return (vals < param.bounds[0]) | (vals > param.bounds[1])
+
+        ob = get_ob()
+
+        # could also do this by sampling 10x the target or whatever
+        i = 0
+        while np.any(ob) and (i < 1000):
+            vals[ob] = dist.rvs(np.sum(ob))
+            ob = get_ob()
+            i += 1
+
+        if i == 1000:
+            vals[vals > param.bounds[1]] = param.bounds[1]
+            vals[vals < param.bounds[0]] = param.bounds[0]
+
+    return vals
+
+
+def create_simple_sampled_distribution_scipy(
+    cf_config: SampledSimpleCFConfig, *args, **kwargs
+) -> None:
+    np.random.seed(seed=int(cf_config.seed))
+
+    param_dict = {}
+    n = cf_config.num_samples
+    select_strs = []
+    for k, v in cf_config.cf_params.items():
+        if v.is_attr:
+            param_dict[k] = [
+                str(v.val),
+            ] * n
+        else:
+            param_dict[k] = _sample_dist(v, n)
+
+        if v.transform:
+            select_strs.append(v.transform)
+        else:
+            select_strs.append(f"{k} as {k}")
+
+    sampled_df = pl.DataFrame(param_dict).with_columns(
+        pl.col(pl.FLOAT_DTYPES).round(cf_config.decimal_places),
+        pl.col(pl.INTEGER_DTYPES).cast(float),  # this saves wierdness w/ sql
+    )
+
+    transformed_df = (
+        pl.SQLContext({"frame": sampled_df})
+        .execute(f"SELECT {','.join(select_strs)} FROM frame")
+        .collect()
+    )
+
+    _create_distribution_table(
+        transformed_df,
+        distribution_name=cf_config.vehicle_distribution_name,
+        write_columns=list(param_dict.keys()),
+        save_path=cf_config.save_path,
     )
 
 

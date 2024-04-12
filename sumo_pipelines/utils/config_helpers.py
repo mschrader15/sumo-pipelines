@@ -1,14 +1,14 @@
 import random
-import re
-import sys
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, List, Union
 
 from omegaconf import DictConfig, ListConfig, OmegaConf
+from simpleeval import simple_eval
 
 from sumo_pipelines.pipe_handlers import load_function
+from sumo_pipelines.utils.stats_utils import transform
 
 if TYPE_CHECKING:
     from sumo_pipelines.config import PipelineConfig
@@ -20,24 +20,6 @@ try:  # pragma: no cover
 
 except ImportError:
     from sumo_pipelines._config_stubs import OptimizationConfig, PipelineConfig
-
-
-# Kept outside simple_eval() just for performance
-_re_simple_eval = re.compile(rb"d([\x00-\xFF]+)S\x00")
-
-
-def simple_eval(expr):
-    try:
-        c = compile(expr, "userinput", "eval")
-    except SyntaxError as e:
-        raise ValueError(f"Malformed expression: {expr}") from e
-    m = _re_simple_eval.fullmatch(c.co_code)
-    if not m:
-        raise ValueError(f"Not a simple algebraic expression: {expr}")
-    try:
-        return c.co_consts[int.from_bytes(m.group(1), sys.byteorder)]
-    except IndexError as exc:
-        raise ValueError(f"Expression not evaluated as constant: {expr}") from exc
 
 
 def update_parent_from_yaml(p, *, _parent_: DictConfig):
@@ -109,6 +91,8 @@ def create_custom_resolvers():
             standard_conf,
             # use_cache=True
         )
+
+        OmegaConf.register_new_resolver("stats.transform", lambda *x: transform(*x))
 
     except Exception as e:
         if "already registered" in str(e):
@@ -310,7 +294,10 @@ def open_config_structured(
                 try:
                     c[k] = OmegaConf.merge(
                         OmegaConf.structured(
-                            eval(k),
+                            getattr(
+                                PipelineConfig,
+                                k,
+                            )
                         ),
                         c[k],
                     )

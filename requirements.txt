@@ -8,4 +8,5 @@ pandas
 polars
 pyarrow
 ray[tune]
+simpleeval
 sumolib

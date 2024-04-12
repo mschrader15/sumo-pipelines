@@ -90,9 +90,15 @@ def run_optimization_core(config_obj: OptimizationConfig, smoke_test: bool):
     handle_results(analysis, config_obj)
 
 
-def run_optimization(config_path: Path, smoke_test: bool):
+def run_optimization(config_path: Path, smoke_test: bool, gui: bool = False):
     # parse the config
     config_obj = open_config_structured(config_path)
+
+    if gui:
+        try:
+            config_obj.Blocks.SimulationConfig.gui = True
+        except AttributeError:
+            print("GUI is not supported for this config.")
 
     # run the optimization
     run_optimization_core(config_obj, smoke_test)

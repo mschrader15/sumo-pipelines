@@ -127,10 +127,13 @@ def usdot_table_join(
         (agg_interval % config.agg_interval) == 0
     )
 
-    start_time = datetime.strptime(
-        config.start_time,
-        "%Y-%m-%d %H:%M:%S",
-    ).replace(tzinfo=timezone("US/Central"))
+    if isinstance(config.start_time, str):
+        start_time = datetime.strptime(
+            config.start_time,
+            "%Y-%m-%d %H:%M:%S",
+        ).replace(tzinfo=timezone("US/Central"))
+    else:
+        start_time = config.start_time.replace(tzinfo=timezone("US/Central"))
 
     sim_df = sim_df.with_columns(
         (pl.lit(start_time) + pl.col("sim_time") * 1e6)
@@ -158,9 +161,7 @@ def usdot_table_join(
                 how="inner",
             )
         )
-        .with_columns(
-            ((pl.col("rw_time") - pl.col("rw_time").min()) / 1e6).alias("sim_time")
-        )
+        .with_columns(((pl.col("rw_time") - start_time) / 1e6).alias("sim_time"))
         .filter(pl.col("sim_time") > config.warmup)
     )
 
