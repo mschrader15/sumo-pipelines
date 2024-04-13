@@ -74,4 +74,4 @@ dependencies = [
 
 [project.scripts]
 sumo-pipe = "sumo_pipelines.execute:main"
-sumo-calibrate = "sumo_pipelines.execute:optimize"
+sumo-calibrate = "sumo_pipelines.optimize:optimize"
