@@ -52,7 +52,6 @@ version = "1.1.6"
 urls = { homepage = "https://github.com/mschrader15/sumo-pipelines" }
 readme = "README.md"
 description = "A collection of pipelines for processing SUMO output data."
-license = "MIT"
 
 # put the required packages in the `install_requires` list
 
