@@ -90,6 +90,9 @@ def run_pipeline(
     """Run the pipeline"""
     c = _config_handler(config, gui, replay)
 
+    if replay:
+        return
+
     _launch_ray(c, debug)
 
     # create the consumer functions

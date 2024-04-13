@@ -217,7 +217,21 @@ def open_config_structured(
             raise e
 
     if isinstance(path, list):
-        all_confs = [OmegaConf.load(p) for p in path]
+        all_confs = []
+        for p in path:
+            try:
+                c = OmegaConf.load(
+                    p,
+                )
+            except Exception:
+                c = OmegaConf.from_dotlist(
+                    [
+                        str(p),
+                    ]
+                )
+
+            all_confs.append(c)
+        # all_confs = [OmegaConf.load(p) for p in path]
         # special merge behavior for Blocks.SimulationConfig.addiational_files & Blocks.SimulationConfig.additional_sim_params
         all_additional_files = []
         additional_sim_params = []

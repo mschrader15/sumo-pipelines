@@ -7,7 +7,7 @@ from sumo_pipelines.optimization.optimize import run_optimization
 
 
 @click.command()
-@click.argument("config", type=click.Path(exists=True, resolve_path=True), nargs=-1)
+@click.argument("config", type=click.STRING, nargs=-1)
 @click.option("--debug", is_flag=True, default=False)
 @click.option("--gui", is_flag=True, default=False)
 def optimize(config: List[str], debug: bool, gui: bool) -> None:
