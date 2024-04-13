@@ -1,6 +1,0 @@
-Inputs:
-  network: network
-  detector_files: 
-    - detector_file
-Outputs:
-  turn_file: turn_file

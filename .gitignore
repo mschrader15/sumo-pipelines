@@ -1,6 +1,10 @@
+# VS Code CPP
+.vscode/*
+!.vscode/c_cpp_properties.json
+
 #macos
 .DS_Store
-.vscode
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
