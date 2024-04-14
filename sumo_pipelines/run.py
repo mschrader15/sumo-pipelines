@@ -19,7 +19,10 @@ except ImportError:
 
 
 def _config_handler(
-    config: Union[Path, List[Path], PipelineConfig], gui: bool, replay: bool
+    config: Union[Path, List[Path], PipelineConfig],
+    gui: bool,
+    replay: bool,
+    skip_pipe_blocks: List[str],
 ) -> PipelineConfig:
     from sumo_pipelines.utils.config_helpers import open_config_structured
 
@@ -36,9 +39,7 @@ def _config_handler(
         c.Blocks.SimulationConfig.gui = gui
 
     if replay:
-        return replay_pipeline(
-            c,
-        )
+        return replay_pipeline(c, skip_pipe_blocks)
 
     return c
 
@@ -62,11 +63,15 @@ def _launch_ray(c: PipelineConfig, debug: bool):
 
 def replay_pipeline(
     config: PipelineConfig,
+    skip_pipe_blocks: List[str],
 ) -> PipelineConfig:
     if not Path(config.Metadata.cwd).exists():
         Path(config.Metadata.cwd).mkdir(parents=True, exist_ok=True)
 
     for k, pipeline in enumerate(config.Pipeline.pipeline):
+        if pipeline.block in skip_pipe_blocks:
+            continue
+
         consumer = create_consumers(
             [
                 (
@@ -86,9 +91,10 @@ def run_pipeline(
     debug: bool,
     gui: bool,
     replay: bool,
+    skip_pipe_blocks: List[str],
 ) -> PipelineConfig:
     """Run the pipeline"""
-    c = _config_handler(config, gui, replay)
+    c = _config_handler(config, gui, replay, skip_pipe_blocks)
 
     if replay:
         return
