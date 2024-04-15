@@ -198,6 +198,8 @@ def open_config_structured(
     path: Union[Path, List[Path]],
     resolve_output: bool = False,
 ) -> Union[PipelineConfig, OptimizationConfig]:
+    # this is so f'n ugly
+
     """
     Open a config file and return the underlying dataclass representation.
 
@@ -218,17 +220,14 @@ def open_config_structured(
 
     if isinstance(path, list):
         all_confs = []
+        update_dotpaths = []
         for p in path:
             try:
                 c = OmegaConf.load(
                     p,
                 )
             except Exception:
-                c = OmegaConf.from_dotlist(
-                    [
-                        str(p),
-                    ]
-                )
+                update_dotpaths.append(str(p).split("="))
 
             all_confs.append(c)
         # all_confs = [OmegaConf.load(p) for p in path]
@@ -272,6 +271,10 @@ def open_config_structured(
 
         # merge the configs
         c = OmegaConf.merge(*all_confs)
+
+        # for dot paths that failed to load
+        for key, value in update_dotpaths:
+            OmegaConf.update(c, key, value, force_add=True)
 
         if len(all_additional_files) > 0:
             c.Blocks.SimulationConfig.additional_files = all_additional_files
