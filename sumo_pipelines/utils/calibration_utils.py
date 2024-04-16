@@ -42,7 +42,7 @@ def tat_step_1(
     *args,
     **kwargs,
 ) -> pl.DataFrame:
-    agg_function = agg_function or pl.col("volume").sum()
+    agg_function = agg_function if agg_function is not None else pl.col("volume").sum()
 
     output_name = agg_function.meta.output_name()
 
@@ -95,7 +95,7 @@ def tat_step_2(
     time_column: str = "Timestamp",
     agg_function: pl.Expr = None,
 ) -> pl.DataFrame:
-    agg_function = agg_function or pl.col("volume").sum()
+    agg_function = agg_function if agg_function is not None else pl.col("volume").sum()
 
     grouped_raw_df = (
         group_raw_df(
@@ -160,7 +160,7 @@ def tat_step_3(
     *args,
     **kwargs,
 ) -> pl.DataFrame:
-    agg_function = agg_function or pl.col("volume").sum()
+    agg_function = agg_function if agg_function is not None else pl.col("volume").sum()
     grouped_raw_df = group_raw_df(
         raw_df=raw_df,
         group_on_cols=group_on_cols,
