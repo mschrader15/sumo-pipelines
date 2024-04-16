@@ -226,10 +226,10 @@ def open_config_structured(
                 c = OmegaConf.load(
                     p,
                 )
+                all_confs.append(c)
             except Exception:
                 update_dotpaths.append(str(p).split("="))
 
-            all_confs.append(c)
         # all_confs = [OmegaConf.load(p) for p in path]
         # special merge behavior for Blocks.SimulationConfig.addiational_files & Blocks.SimulationConfig.additional_sim_params
         all_additional_files = []
