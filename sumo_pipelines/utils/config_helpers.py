@@ -272,14 +272,15 @@ def open_config_structured(
         # merge the configs
         c = OmegaConf.merge(*all_confs)
 
-        # for dot paths that failed to load
-        for key, value in update_dotpaths:
-            OmegaConf.update(c, key, value, force_add=True)
-
         if len(all_additional_files) > 0:
             c.Blocks.SimulationConfig.additional_files = all_additional_files
         if len(additional_sim_params) > 0:
             c.Blocks.SimulationConfig.additional_sim_params = additional_sim_params
+
+        # for dot paths that failed to load
+        for key, value in update_dotpaths:
+            OmegaConf.update(c, key, value, force_add=True, merge=True)
+
     else:
         c = OmegaConf.load(
             path,

@@ -102,6 +102,7 @@ def run_sumo_fast_fcd(config: SimulationConfig, parent_config: DictConfig) -> No
 
     if config.simulation_output:
         with open(config.simulation_output, "w") as f:
+            f.write(" ".join(sumo_cmd))
             with redirect_stdout(f):
                 traci_vehicle_state_runner(sumo_cmd, config.warmup_time, output_file)
     else:
