@@ -28,4 +28,4 @@ def update_search_space(config: SearchSpaceConfig, new_parameters: Dict[str, Any
     for k, v in new_parameters.items():
         if k not in config.variables:
             raise ValueError(f"Parameter {k} not found in search space.")
-        config.variables[k].val = v
+        config.variables[k].val = float(v)
