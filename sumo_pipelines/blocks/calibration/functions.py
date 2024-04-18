@@ -93,8 +93,6 @@ def calculate_geh(config: PostProcessingGEHConfig, *args, **kwargs):
 
 
 def _open_detector_df(file_path: str, target_col: str):
-    import polars as pl
-
     return (
         pl.scan_parquet(file_path)
         .rename({"nVehEntered": "volume", "begin": "sim_time", "id": "detector"})

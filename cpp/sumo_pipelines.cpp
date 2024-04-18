@@ -25,7 +25,7 @@ void traci_vehicle_state_runner(const std::vector<std::string>& simulation_start
     auto t = warmup_time;
     const auto end_time = Simulation::getEndTime();
 
-    while ((t < (end_time - 1)) && (Simulation::getMinExpectedNumber() > 0)) {
+    while ((t < (end_time - 1)) || (Simulation::getMinExpectedNumber() == 0)) {
         Simulation::step();
 
         t = Simulation::getTime();

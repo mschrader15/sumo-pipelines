@@ -54,6 +54,10 @@ std::shared_ptr<parquet::schema::GroupNode> GetFCDOutputSchema() {
         "lane", parquet::Repetition::OPTIONAL, parquet::Type::BYTE_ARRAY,
         parquet::ConvertedType::UTF8));
 
+    fields.push_back(parquet::schema::PrimitiveNode::Make(
+        "eclass", parquet::Repetition::OPTIONAL, parquet::Type::BYTE_ARRAY,
+        parquet::ConvertedType::UTF8));
+
 
     return std::static_pointer_cast<parquet::schema::GroupNode>(
         parquet::schema::GroupNode::Make("schema", parquet::Repetition::REQUIRED, fields));
@@ -69,6 +73,7 @@ public:
             outfile_, arrow::io::FileOutputStream::Open(outfile));
 
         builder_.compression(parquet::Compression::ZSTD);
+        // builder_.compression_level(15);
 
         // construct the writer_
         writer_ = parquet::StreamWriter{
@@ -78,7 +83,7 @@ public:
 
     inline void writeRow(const std::string& id, const double time) {
         const auto& pos = libsumo::Vehicle::getPosition(id);
-        writer_ << id << time << libsumo::Vehicle::getSpeed(id) << libsumo::Vehicle::getAcceleration(id) << pos.x << pos.y << libsumo::Vehicle::getFuelConsumption(id) << libsumo::Vehicle::getLaneID(id) << parquet::EndRow;
+        writer_ << id << time << libsumo::Vehicle::getSpeed(id) << libsumo::Vehicle::getAcceleration(id) << pos.x << pos.y << libsumo::Vehicle::getFuelConsumption(id) << libsumo::Vehicle::getLaneID(id) << libsumo::Vehicle::getEmissionClass(id) << parquet::EndRow;
     }
 
     void setRowGroupSize(int64_t size) {
