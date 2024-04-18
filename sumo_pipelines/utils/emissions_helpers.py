@@ -169,7 +169,7 @@ def calc_instant_power(
         )
 
     assert (
-        df[emission_class_column].str.contains("PHEMLight/").all()
+        df[emission_class_column].str.contains("PHEMlight/").all()
     ), "Only PHEMLight (not V5) emission classes are supported"
 
     def _calc_power_vclass(
@@ -206,7 +206,7 @@ def calc_instant_power(
                 * rolling_resistance
                 # * speed
             )
-            + (type_data["cw"] * type_data["cross_area"] * AIR_DENSITY_CONST / 2)
+            + (type_data["cw_value"] * type_data["cross_area"] * AIR_DENSITY_CONST / 2)
             * speed**2
             + (
                 (
