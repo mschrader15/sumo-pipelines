@@ -9,4 +9,4 @@
 
 ### [sa-traffic-sim](https://github.com/UnivOfAlabama-BittleResearchGroup/sa-traffic-sim)
 
-`sumo-pipelines` was used to preform comprehensive sensitivity analysis on the traffic simulation model.
+`sumo-pipelines` was used to perform comprehensive sensitivity analysis on the traffic simulation model.

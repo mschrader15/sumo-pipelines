@@ -58,6 +58,13 @@ std::shared_ptr<parquet::schema::GroupNode> GetFCDOutputSchema() {
         "eclass", parquet::Repetition::OPTIONAL, parquet::Type::BYTE_ARRAY,
         parquet::ConvertedType::UTF8));
 
+    fields.push_back(parquet::schema::PrimitiveNode::Make(
+        "leader_id", parquet::Repetition::OPTIONAL, parquet::Type::BYTE_ARRAY,
+        parquet::ConvertedType::UTF8));
+
+    fields.push_back(parquet::schema::PrimitiveNode::Make(
+        "leader_distance", parquet::Repetition::OPTIONAL, parquet::Type::DOUBLE,
+        parquet::ConvertedType::NONE));
 
     return std::static_pointer_cast<parquet::schema::GroupNode>(
         parquet::schema::GroupNode::Make("schema", parquet::Repetition::REQUIRED, fields));
@@ -83,7 +90,19 @@ public:
 
     inline void writeRow(const std::string& id, const double time) {
         const auto& pos = libsumo::Vehicle::getPosition(id);
-        writer_ << id << time << libsumo::Vehicle::getSpeed(id) << libsumo::Vehicle::getAcceleration(id) << pos.x << pos.y << libsumo::Vehicle::getFuelConsumption(id) << libsumo::Vehicle::getLaneID(id) << libsumo::Vehicle::getEmissionClass(id) << parquet::EndRow;
+        const auto& leader = libsumo::Vehicle::getLeader(id, 200);
+
+
+        writer_
+        << id << time
+        << libsumo::Vehicle::getSpeed(id)
+        << libsumo::Vehicle::getAcceleration(id)
+        << pos.x << pos.y
+        << libsumo::Vehicle::getFuelConsumption(id)
+        << libsumo::Vehicle::getLaneID(id)
+        << libsumo::Vehicle::getEmissionClass(id)
+        << leader.first << leader.second
+        << parquet::EndRow;
     }
 
     void setRowGroupSize(int64_t size) {
