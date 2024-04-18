@@ -162,6 +162,16 @@ def calc_instant_power(
     emissions_data_path: Optional[str] = None,
     emission_class_column: str = "eclass",
 ) -> pl.DataFrame:
+    if emissions_data_path is None:
+        emissions_data_path = os.path.join(
+            os.environ["SUMO_HOME"],
+            "data/emissions",
+        )
+
+    assert (
+        df[emission_class_column].str.contains("PHEMLight/").all()
+    ), "Only PHEMLight (not V5) emission classes are supported"
+
     def _calc_power_vclass(
         _df: pl.DataFrame,
     ) -> float:
