@@ -22,7 +22,7 @@ void traci_vehicle_state_runner(const std::vector<std::string>& simulation_start
 
     auto parquet_writer = StreamWriter(file_name);
 
-    auto t = warmup_time;
+    double t = static_cast<double>(warmup_time);
     const auto end_time = Simulation::getEndTime();
 
     while (t < (end_time - 1)) {
