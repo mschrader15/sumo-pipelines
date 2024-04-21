@@ -73,6 +73,8 @@ def with_parameter_wrapper(
         kwargs = config.Optimization.ObjectiveWrapper.function(
             config.Optimization.ObjectiveWrapper.config, config
         )
+    else:
+        kwargs = {}
 
     # resolve the Metadata
     OmegaConf.resolve(config.Metadata)
