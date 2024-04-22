@@ -30,8 +30,14 @@ void traci_vehicle_state_runner(const std::vector<std::string>& simulation_start
 
         t = Simulation::getTime();
 
+        const auto collision_ids = Simulation::getCollidingVehiclesIDList();
+
         for (const std::string& vehicle : Vehicle::getIDList()) {
-            parquet_writer.writeRow(vehicle, t);
+            bool collision = false;
+            if (std::find(collision_ids.begin(), collision_ids.end(), vehicle) != collision_ids.end()) {
+                collision = true;
+            }
+            parquet_writer.writeRow(vehicle, t, collision);
         }
 
 

@@ -23,51 +23,55 @@ std::shared_ptr<parquet::schema::GroupNode> GetFCDOutputSchema() {
     parquet::schema::NodeVector fields;
 
     fields.push_back(parquet::schema::PrimitiveNode::Make(
-                         "id", parquet::Repetition::OPTIONAL, parquet::Type::BYTE_ARRAY,
-                         parquet::ConvertedType::UTF8));
+        "id", parquet::Repetition::OPTIONAL, parquet::Type::BYTE_ARRAY,
+        parquet::ConvertedType::UTF8));
 
     fields.push_back(parquet::schema::PrimitiveNode::Make(
-                         "time", parquet::Repetition::REQUIRED, parquet::Type::DOUBLE,
-                         parquet::ConvertedType::NONE));
+        "time", parquet::Repetition::REQUIRED, parquet::Type::DOUBLE,
+        parquet::ConvertedType::NONE));
 
     fields.push_back(parquet::schema::PrimitiveNode::Make(
-                         "speed", parquet::Repetition::REQUIRED, parquet::Type::DOUBLE,
-                         parquet::ConvertedType::NONE));
+        "speed", parquet::Repetition::REQUIRED, parquet::Type::DOUBLE,
+        parquet::ConvertedType::NONE));
 
     fields.push_back(parquet::schema::PrimitiveNode::Make(
-                         "accel", parquet::Repetition::REQUIRED, parquet::Type::DOUBLE,
-                         parquet::ConvertedType::NONE));
+        "accel", parquet::Repetition::REQUIRED, parquet::Type::DOUBLE,
+        parquet::ConvertedType::NONE));
 
     fields.push_back(parquet::schema::PrimitiveNode::Make(
-                         "x", parquet::Repetition::REQUIRED, parquet::Type::DOUBLE,
-                         parquet::ConvertedType::NONE));
+        "x", parquet::Repetition::REQUIRED, parquet::Type::DOUBLE,
+        parquet::ConvertedType::NONE));
 
     fields.push_back(parquet::schema::PrimitiveNode::Make(
-                         "y", parquet::Repetition::REQUIRED, parquet::Type::DOUBLE,
-                         parquet::ConvertedType::NONE));
+        "y", parquet::Repetition::REQUIRED, parquet::Type::DOUBLE,
+        parquet::ConvertedType::NONE));
 
     fields.push_back(parquet::schema::PrimitiveNode::Make(
-                         "fuel", parquet::Repetition::REQUIRED, parquet::Type::DOUBLE,
-                         parquet::ConvertedType::NONE));
+        "fuel", parquet::Repetition::REQUIRED, parquet::Type::DOUBLE,
+        parquet::ConvertedType::NONE));
 
     fields.push_back(parquet::schema::PrimitiveNode::Make(
-                         "lane", parquet::Repetition::OPTIONAL, parquet::Type::BYTE_ARRAY,
-                         parquet::ConvertedType::UTF8));
+        "lane", parquet::Repetition::OPTIONAL, parquet::Type::BYTE_ARRAY,
+        parquet::ConvertedType::UTF8));
 
     fields.push_back(parquet::schema::PrimitiveNode::Make(
-                         "eclass", parquet::Repetition::OPTIONAL, parquet::Type::BYTE_ARRAY,
-                         parquet::ConvertedType::UTF8));
+        "eclass", parquet::Repetition::OPTIONAL, parquet::Type::BYTE_ARRAY,
+        parquet::ConvertedType::UTF8));
 
     fields.push_back(parquet::schema::PrimitiveNode::Make(
-                         "leader_id", parquet::Repetition::OPTIONAL, parquet::Type::BYTE_ARRAY,
-                         parquet::ConvertedType::UTF8));
+        "leader_id", parquet::Repetition::OPTIONAL, parquet::Type::BYTE_ARRAY,
+        parquet::ConvertedType::UTF8));
 
     fields.push_back(parquet::schema::PrimitiveNode::Make(
-                         "leader_distance", parquet::Repetition::OPTIONAL, parquet::Type::DOUBLE,
-                         parquet::ConvertedType::NONE));
+        "leader_distance", parquet::Repetition::OPTIONAL, parquet::Type::DOUBLE,
+        parquet::ConvertedType::NONE));
+
+    fields.push_back(parquet::schema::PrimitiveNode::Make(
+        "collision", parquet::Repetition::OPTIONAL, parquet::Type::BOOLEAN,
+        parquet::ConvertedType::NONE));
 
     return std::static_pointer_cast<parquet::schema::GroupNode>(
-               parquet::schema::GroupNode::Make("schema", parquet::Repetition::REQUIRED, fields));
+        parquet::schema::GroupNode::Make("schema", parquet::Repetition::REQUIRED, fields));
 }
 
 
@@ -88,21 +92,21 @@ public:
 
     };
 
-    inline void writeRow(const std::string& id, const double time) {
+    inline void writeRow(const std::string& id, const double time, bool collision) {
         const auto& pos = libsumo::Vehicle::getPosition(id);
         const auto& leader = libsumo::Vehicle::getLeader(id, 1000);
 
-
         writer_
-                << id << time
-                << libsumo::Vehicle::getSpeed(id)
-                << libsumo::Vehicle::getAcceleration(id)
-                << pos.x << pos.y
-                << libsumo::Vehicle::getFuelConsumption(id)
-                << libsumo::Vehicle::getLaneID(id)
-                << libsumo::Vehicle::getEmissionClass(id)
-                << leader.first << leader.second
-                << parquet::EndRow;
+            << id << time
+            << libsumo::Vehicle::getSpeed(id)
+            << libsumo::Vehicle::getAcceleration(id)
+            << pos.x << pos.y
+            << libsumo::Vehicle::getFuelConsumption(id)
+            << libsumo::Vehicle::getLaneID(id)
+            << libsumo::Vehicle::getEmissionClass(id)
+            << leader.first << leader.second
+            << collision
+            << parquet::EndRow;
     }
 
     void setRowGroupSize(int64_t size) {
