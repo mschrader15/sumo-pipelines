@@ -90,7 +90,7 @@ public:
 
     inline void writeRow(const std::string& id, const double time) {
         const auto& pos = libsumo::Vehicle::getPosition(id);
-        const auto& leader = libsumo::Vehicle::getLeader(id, 200);
+        const auto& leader = libsumo::Vehicle::getLeader(id, 1000);
 
 
         writer_
