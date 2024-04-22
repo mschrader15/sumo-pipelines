@@ -38,6 +38,7 @@ class TunerConfig:
 @dataclass
 class ObjectiveConfig:
     function: Any
+    n_iterations: int = 1
     config: Dict[str, Any] = field(default_factory=dict)
     additional_returns: Dict[str, Any] = field(default_factory=dict)
 

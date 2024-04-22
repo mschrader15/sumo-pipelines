@@ -32,33 +32,35 @@ def target_wrapper(
         context = train.get_context()
         local_global_config.Metadata.run_id = context.get_trial_id()
         local_global_config.Metadata.cwd = context.get_trial_dir()
-        # local_global_config.Metadata.cwd =
 
         # update the config with the ray dictionary
         local_global_config.Optimization.SearchSpace.update_function(
             local_global_config.Optimization.SearchSpace, config
         )
 
-        # execute the pre-processing pipeline
-        block = get_pipeline_by_name(local_global_config, "Pre-Processing")
-        if block is not None:
-            execute_pipe_block(block, local_global_config)
+        for _ in range(global_config.Optimization.ObjectiveFn.n_iterations):
+            # execute the pre-processing pipeline
+            block = get_pipeline_by_name(local_global_config, "Pre-Processing")
+            if block is not None:
+                execute_pipe_block(block, local_global_config)
 
-        # execute the target function
-        res = local_global_config.Optimization.ObjectiveFn.function(
-            *args,
-            config=local_global_config,
-            function_config=local_global_config.Optimization.ObjectiveFn.config,
-            **kwargs,
-        )
+            # execute the target function
+            res = local_global_config.Optimization.ObjectiveFn.function(
+                *args,
+                config=local_global_config,
+                function_config=local_global_config.Optimization.ObjectiveFn.config,
+                **kwargs,
+            )
 
-        # try to execute the cleanup pipeline
-        block = get_pipeline_by_name(local_global_config, "Cleanup")
-        if block is not None:
-            execute_pipe_block(block, local_global_config)
+            # try to execute the cleanup pipeline
+            block = get_pipeline_by_name(local_global_config, "Cleanup")
+            if block is not None:
+                execute_pipe_block(block, local_global_config)
 
-        if local_global_config.Optimization.ObjectiveFn.additional_returns:
-            res.update(local_global_config.Optimization.ObjectiveFn.additional_returns)
+            if local_global_config.Optimization.ObjectiveFn.additional_returns:
+                res.update(
+                    local_global_config.Optimization.ObjectiveFn.additional_returns
+                )
 
         return res
 
