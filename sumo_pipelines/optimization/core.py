@@ -38,7 +38,7 @@ def target_wrapper(
             local_global_config.Optimization.SearchSpace, config
         )
 
-        for _ in range(global_config.Optimization.ObjectiveFn.n_iterations):
+        for _ in range(local_global_config.Optimization.ObjectiveFn.n_iterations):
             # execute the pre-processing pipeline
             block = get_pipeline_by_name(local_global_config, "Pre-Processing")
             if block is not None:
