@@ -58,8 +58,13 @@ def rm_file(config: RemoveFileConfig, parent_config: OmegaConf) -> None:
         if os.path.isfile(f):
             os.remove(f)
             print(f"Removed file: {f}")
-        else:
-            print(f"No such file: {f}")
+        try:
+            p = Path(f)
+            for _p in p.parent.glob(f"{p.name}"):
+                _p.unlink()
+                print(f"Removed file: {_p}")
+        except Exception:
+            print(f"Error removing file: {f}")
 
 
 def build_duckdb_database(config: DuckDBConfig, *args, **kwargs) -> None:

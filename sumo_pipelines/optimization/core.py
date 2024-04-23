@@ -46,13 +46,14 @@ def target_wrapper(
             if block is not None:
                 execute_pipe_block(block, local_global_config)
 
-            # execute the target function
-            res = local_global_config.Optimization.ObjectiveFn.function(
-                *args,
-                config=local_global_config,
-                function_config=local_global_config.Optimization.ObjectiveFn.config,
-                **kwargs,
-            )
+            # execute the target function. Don't actually have to have an objective fn...
+            if local_global_config.Optimization.ObjectiveFn.function is not None:
+                res = local_global_config.Optimization.ObjectiveFn.function(
+                    *args,
+                    config=local_global_config,
+                    function_config=local_global_config.Optimization.ObjectiveFn.config,
+                    **kwargs,
+                )
 
             if local_global_config.Optimization.ObjectiveFn.report_config:
                 train.report(

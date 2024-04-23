@@ -231,14 +231,17 @@ def calc_normalized_fc(
         #     }
         #     return getEmission(oldCep, currCep, "FC", power, corrSpeed) / SECONDS_PER_HOUR * 1000.; // still in mg even if myVolumetricFuel is set!
         # }
-        max_power = read_vehicle_file(emissions_data_path, d)["rated_power"]
+        max_power = float(read_vehicle_file(emissions_data_path, d)["rated_power"])
 
         norm_constants[d] = mg_s_kw * max_power  # -> mg/s/kW -> mg/s
 
     df = df.with_columns(
-        (pl.col(fc_col) / pl.col(emission_class_column).replace(norm_constants)).alias(
-            output_col
-        )
+        (
+            pl.col(fc_col)
+            / pl.col(emission_class_column).replace(
+                norm_constants, return_dtype=pl.Float32()
+            )
+        ).alias(output_col)
     )
 
     assert df[output_col].max() <= 1, "Normalized FC should be less than 1"

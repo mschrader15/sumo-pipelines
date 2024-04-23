@@ -223,7 +223,9 @@ def emissions_table_to_total(
 ) -> None:
     import polars as pl
 
-    def _polygon_filter(df, polygon):
+    def _polygon_filter(
+        df,
+    ):
         if config.filter_polygon:
             return df.filter(
                 is_inside_sm_parallel(
@@ -236,21 +238,19 @@ def emissions_table_to_total(
     df = (
         pl.scan_parquet(config.input_file)
         .filter(
-            pl.col("timestep").is_between(
-                config.time_low_filter, config.time_high_filter
-            )
+            pl.col("time").is_between(config.time_low_filter, config.time_high_filter)
         )
+        .collect()
         .pipe(
             _polygon_filter,
         )
-        .collect()
         .pipe(
             calc_normalized_fc,
             fc_col="fuel",
             output_col="fuel_normed",
         )
         .lazy()
-        .sort("timestep")
+        .sort("time")
         .with_columns(
             [
                 (pl.col("fuel") * config.sim_step / 1e3).alias("fuel"),

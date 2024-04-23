@@ -6,7 +6,7 @@ from typing import List, Union
 class PhaseUpdateConfig:
     phase: int
     key: str
-    value: Union[int, float, str]
+    val: Union[int, float, str]
 
 
 @dataclass

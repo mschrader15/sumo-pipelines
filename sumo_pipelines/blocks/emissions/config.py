@@ -26,6 +26,7 @@ class EmissionsTableFuelTotalConfig:
     total_timeloss: float = MISSING
     average_delay: float = MISSING
     average_fc: float = MISSING
+    average_fc_normed: float = MISSING
     time_low_filter: float = field(default=0)
     time_high_filter: float = field(default=1e9)
     filter_polygon: Any = field(default=None)

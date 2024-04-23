@@ -43,8 +43,8 @@ def update_nema(
 
         for phase_update in nema_conf.phase_updates:
             nema.update_phase(
-                phase_update.phase, **{phase_update.key: phase_update.value}
+                phase_update.phase, **{phase_update.key: phase_update.val}
             )
 
         with open(nema_conf.out_file, "w") as f:
-            nema.to_xml(f)
+            f.write(nema.to_xml())

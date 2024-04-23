@@ -90,7 +90,7 @@ def run_sumo_fast_fcd(config: SimulationConfig, parent_config: DictConfig) -> No
 
     sumo_cmd = config.make_cmd(config)
 
-    ind = sumo_cmd.index("--fcd-output")
+    ind = sumo_cmd.index("--fcd-output") if "--fcd-output" in sumo_cmd else -1
     if ind == -1:
         raise ValueError("No fcd-output flag found in sumo command")
 
@@ -99,14 +99,22 @@ def run_sumo_fast_fcd(config: SimulationConfig, parent_config: DictConfig) -> No
     output_file = sumo_cmd.pop(ind)
 
     # check if collisions are desired
-    ind = sumo_cmd.index("--fcd-output.collisions")
+    ind = (
+        sumo_cmd.index("--fcd-output.collisions")
+        if "--fcd-output.collisions" in sumo_cmd
+        else -1
+    )
     collisions = False
     if ind != -1:
         sumo_cmd.pop(ind)
         collisions = True
 
     # check if leader is desired
-    ind = sumo_cmd.index("--fcd-output.leader")
+    ind = (
+        sumo_cmd.index("--fcd-output.leader")
+        if "--fcd-output.leader" in sumo_cmd
+        else -1
+    )
     leader = False
     if ind != -1:
         sumo_cmd.pop(ind)
