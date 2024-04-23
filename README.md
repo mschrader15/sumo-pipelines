@@ -1,5 +1,7 @@
 # sumo-pipelines
 
+Allows for a end to end SUMO pipeline definition using standalone processing **[blocks](https://github.com/mschrader15/sumo-pipelines/tree/main/sumo_pipelines/blocks)**. Supports massive parallelization using Ray, as well as parallel calibration using Ray Tune and Nevergrad.
+
 
 ## Used By:
 
