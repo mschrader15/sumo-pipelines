@@ -4,6 +4,7 @@ from pathlib import Path
 
 import numpy as np
 
+from sumo_pipelines.utils.emissions_helpers import calc_normalized_fc
 from sumo_pipelines.utils.geo_helpers import get_polygon, is_inside_sm_parallel
 
 # from sumo_pipelines.utils.geo_helpers import is_inside_sm_parallel
@@ -222,6 +223,16 @@ def emissions_table_to_total(
 ) -> None:
     import polars as pl
 
+    def _polygon_filter(df, polygon):
+        if config.filter_polygon:
+            return df.filter(
+                is_inside_sm_parallel(
+                    df.select(pl.col("x"), pl.col("y")).to_numpy(),
+                    get_polygon(config.filter_polygon),
+                )
+            )
+        return df
+
     df = (
         pl.scan_parquet(config.input_file)
         .filter(
@@ -229,6 +240,16 @@ def emissions_table_to_total(
                 config.time_low_filter, config.time_high_filter
             )
         )
+        .pipe(
+            _polygon_filter,
+        )
+        .collect()
+        .pipe(
+            calc_normalized_fc,
+            fc_col="fuel",
+            output_col="fuel_normed",
+        )
+        .lazy()
         .sort("timestep")
         .with_columns(
             [
@@ -238,6 +259,7 @@ def emissions_table_to_total(
                 .over("id")
                 .fill_null(0)
                 .alias("distance"),
+                pl.col("time_loss").diff().over("id").fill_null(0).alias("delay"),
             ]
         )
         .with_columns(
@@ -248,8 +270,27 @@ def emissions_table_to_total(
                 .alias("fuel_energy")
             ]
         )
+        .with_columns(
+            (pl.col("fuel_energy") / SUMO_GASOLINE_GRAM_TO_JOULE).alias(
+                "fuel_gasoline_e"
+            ),
+        )
+        .select(
+            [
+                pl.col("fuel_gasoline_e").sum().alias("fuel"),
+                pl.col("distance").sum().alias("distance"),
+                pl.col("id").n_unique().alias("id"),
+                pl.col("time_loss").last().over("id").sum().alias("time_loss"),
+                pl.col("delay").mean().alias("average_delay"),
+                pl.col("fuel_normed").mean().alias("average_normed_fc"),
+            ]
+        )
+        .collect()
     )
 
-    config.total_fuel = df.select(pl.col("fuel").sum()).collect()["fuel"][0]
-    config.total_distance = df.select(pl.col("distance").sum()).collect()["distance"][0]
-    config.num_vehicles = df.select(pl.col("id").n_unique()).collect()["id"][0]
+    config.total_fuel = float(df["fuel"][0])
+    config.total_distance = float(df["distance"][0])
+    config.num_vehicles = int(df["id"][0])
+    config.total_timeloss = float(df["time_loss"][0])
+    config.average_delay = float(df["average_delay"][0])
+    config.average_fc_normed = float(df["average_normed_fc"][0])

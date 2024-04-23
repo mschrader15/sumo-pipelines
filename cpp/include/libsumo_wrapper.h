@@ -19,7 +19,10 @@
 
 #pragma once
 
-std::shared_ptr<parquet::schema::GroupNode> GetFCDOutputSchema() {
+std::shared_ptr<parquet::schema::GroupNode> GetFCDOutputSchema(
+    bool include_leader = true,
+    bool include_collision = true
+) {
     parquet::schema::NodeVector fields;
 
     fields.push_back(parquet::schema::PrimitiveNode::Make(
@@ -59,16 +62,24 @@ std::shared_ptr<parquet::schema::GroupNode> GetFCDOutputSchema() {
         parquet::ConvertedType::UTF8));
 
     fields.push_back(parquet::schema::PrimitiveNode::Make(
-        "leader_id", parquet::Repetition::OPTIONAL, parquet::Type::BYTE_ARRAY,
-        parquet::ConvertedType::UTF8));
-
-    fields.push_back(parquet::schema::PrimitiveNode::Make(
-        "leader_distance", parquet::Repetition::OPTIONAL, parquet::Type::DOUBLE,
+        "time_loss", parquet::Repetition::REQUIRED, parquet::Type::DOUBLE,
         parquet::ConvertedType::NONE));
 
-    fields.push_back(parquet::schema::PrimitiveNode::Make(
-        "collision", parquet::Repetition::OPTIONAL, parquet::Type::BOOLEAN,
-        parquet::ConvertedType::NONE));
+    if (include_leader) {
+        fields.push_back(parquet::schema::PrimitiveNode::Make(
+            "leader_id", parquet::Repetition::OPTIONAL, parquet::Type::BYTE_ARRAY,
+            parquet::ConvertedType::UTF8));
+
+        fields.push_back(parquet::schema::PrimitiveNode::Make(
+            "leader_distance", parquet::Repetition::OPTIONAL, parquet::Type::DOUBLE,
+            parquet::ConvertedType::NONE));
+    }
+
+    if (include_collision) {
+        fields.push_back(parquet::schema::PrimitiveNode::Make(
+            "collision", parquet::Repetition::OPTIONAL, parquet::Type::BOOLEAN,
+            parquet::ConvertedType::NONE));
+    }
 
     return std::static_pointer_cast<parquet::schema::GroupNode>(
         parquet::schema::GroupNode::Make("schema", parquet::Repetition::REQUIRED, fields));
@@ -78,7 +89,7 @@ std::shared_ptr<parquet::schema::GroupNode> GetFCDOutputSchema() {
 
 class StreamWriter {
 public:
-    StreamWriter(std::string& outfile) {
+    StreamWriter(std::string& outfile, bool include_leader = true, bool include_collision = true) {
 
         PARQUET_ASSIGN_OR_THROW(
             outfile_, arrow::io::FileOutputStream::Open(outfile));
@@ -86,27 +97,40 @@ public:
         builder_.compression(parquet::Compression::ZSTD);
         // builder_.compression_level(15);
 
+        include_leader_ = include_leader;
+        include_collision_ = include_collision;
+
         // construct the writer_
         writer_ = parquet::StreamWriter{
-            parquet::ParquetFileWriter::Open(outfile_, GetFCDOutputSchema(), builder_.build()) };
+            parquet::ParquetFileWriter::Open(outfile_, GetFCDOutputSchema(
+                include_leader, include_collision
+            ), builder_.build()) };
 
     };
 
     inline void writeRow(const std::string& id, const double time, bool collision) {
         const auto& pos = libsumo::Vehicle::getPosition(id);
-        const auto& leader = libsumo::Vehicle::getLeader(id, 1000);
 
-        writer_
-            << id << time
+        writer_ << id << time
             << libsumo::Vehicle::getSpeed(id)
             << libsumo::Vehicle::getAcceleration(id)
             << pos.x << pos.y
             << libsumo::Vehicle::getFuelConsumption(id)
             << libsumo::Vehicle::getLaneID(id)
             << libsumo::Vehicle::getEmissionClass(id)
-            << leader.first << leader.second
-            << collision
-            << parquet::EndRow;
+            << libsumo::Vehicle::getTimeLoss(id);
+
+
+        if (include_leader_) {
+            const auto& leader = libsumo::Vehicle::getLeader(id, 1000);
+            writer_ << leader.first << leader.second;
+        }
+
+        if (include_collision_) {
+            writer_ << collision;
+        }
+
+        writer_ << parquet::EndRow;
     }
 
     void setRowGroupSize(int64_t size) {
@@ -118,4 +142,6 @@ private:
     std::shared_ptr<arrow::io::FileOutputStream> outfile_;
     std::shared_ptr<parquet::schema::GroupNode> schema_;
     parquet::StreamWriter writer_;
+    bool include_leader_;
+    bool include_collision_;
 };

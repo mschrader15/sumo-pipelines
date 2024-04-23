@@ -23,8 +23,12 @@ class EmissionsTableFuelTotalConfig:
     total_fuel: float = MISSING
     total_distance: float = MISSING
     num_vehicles: int = MISSING
+    total_timeloss: float = MISSING
+    average_delay: float = MISSING
+    average_fc: float = MISSING
     time_low_filter: float = field(default=0)
     time_high_filter: float = field(default=1e9)
+    filter_polygon: Any = field(default=None)
 
 
 @dataclass
