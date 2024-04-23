@@ -1,8 +1,198 @@
+import os
 import xml.etree.ElementTree as ET
 from collections import OrderedDict
+from dataclasses import dataclass, fields
+from os import PathLike
+from typing import Dict, Union
 
 import polars as pl
 import sumolib
+
+
+@dataclass
+class Phase:
+    name: int
+    state: str
+    minDur: float
+    maxDur: float
+    vehext: float
+    yellow: float
+    red: float
+    duration: float
+
+    def to_xml(
+        self,
+    ) -> str:
+        return f"""<phase {' '.join(f'{k}="{getattr(self, k)}"' for k in self.__dataclass_fields__)}/>"""
+
+    @classmethod
+    def from_xml(cls, xml: str):
+        type_dict = {k.name: k.type for k in fields(cls)}
+
+        return cls(
+            **dict(
+                (k, type_dict[k](v))
+                for k, v in (
+                    p.split("=")
+                    for p in xml.replace('"', "")
+                    .replace("<phase", "")
+                    .replace("/>", "")
+                    .split()
+                )
+            )
+        )
+
+    @property
+    def total_duration(
+        self,
+    ) -> float:
+        return self.maxDur + self.yellow + self.red
+
+
+@dataclass
+class Param:
+    key: str
+    value: str
+
+    def to_xml(
+        self,
+    ) -> str:
+        return f"""<param key="{self.key}" value="{self.value}"/>"""
+
+    @classmethod
+    def from_xml(cls, xml: str):
+        type_dict = {k.name: k.type for k in fields(cls)}
+
+        return cls(
+            **dict(
+                (k, type_dict[k](v))
+                for k, v in (
+                    p.split("=")
+                    for p in xml.replace('"', "")
+                    .replace("<param", "")
+                    .replace("/>", "")
+                    .split()
+                )
+            )
+        )
+
+
+@dataclass
+class NEMALight:
+    id: str
+    programID: str
+    offset: float
+    type: str
+
+    def __post_init__(self):
+        self.phases: Dict[int, Phase] = {}
+        self.params: Dict[str, str] = {}
+
+    def add_phase(self, phase: Phase):
+        self.phases[phase.name] = phase
+
+    def add_param(self, param: Param):
+        self.params[param.key] = param
+
+    def to_xml(
+        self,
+    ) -> str:
+        params = "\t\t".join(p.to_xml() + "\n" for p in self.params.values())
+        phases = "\t\t".join(p.to_xml() + "\n" for p in self.phases.values())
+
+        return f"""
+        <add>
+            <tlLogic {' '.join(f'{k}="{getattr(self, k)}"' for k in self.__dataclass_fields__)}>
+                {params}
+                {phases}
+            </tlLogic>
+        </add>
+        """
+
+    @classmethod
+    def from_xml(
+        cls, xml: Union[str, PathLike], id: str, programID: str
+    ) -> "NEMALight":
+        import re
+
+        if os.path.exists(xml):
+            with open(xml) as f:
+                xml = f.read()
+
+        tl = None
+        for tl in re.finditer(r"<tlLogic (.*)>", xml):
+            tl = cls(
+                **dict([g.split("=") for g in tl.group(1).replace('"', "").split(" ")])
+            )
+            if (tl.id == id) and (tl.programID == programID):
+                break
+
+        assert (
+            tl is not None
+        ), f"No traffic light found with id: {id} and programID: {programID}"
+
+        assert tl.type == "NEMA", "The traffic light is not a NEMA traffic light"
+
+        # get the phases
+        for phase in re.findall(r"<phase.*?/>", xml):
+            tl.add_phase(Phase.from_xml(phase))
+
+        # get the params
+        for param in re.findall(r"<param.*?/>", xml):
+            tl.add_param(Param.from_xml(param))
+
+        return tl
+
+    def update_offset(self, offset: float):
+        self.offset = offset
+
+    def update_phase(self, phase_name: int, **params):
+        for k, v in params.items():
+            setattr(self.phases[phase_name], k, v)
+
+    def update_coordinate_splits(
+        self,
+        splits: dict[int, float],
+    ) -> None:
+        # get the coordinate phases
+        coord_phases = self.params.get("coordinatePhases", "").value.split(",")
+        if not coord_phases:
+            raise ValueError("No coordinate phases found in the NEMA configuration")
+
+        # get the rings
+        ring1 = self.params.get("ring1", "").value.split(",")
+        ring2 = self.params.get("ring2", "").value.split(",")
+
+        # get the phase order
+        # barrierPhases = self.params.get("barrierPhases", "").split(",")
+        # barrier2Phases = self.params.get("barrier2Phases", "").split(",")
+
+        # construct a list of list of phases
+        ring_1 = [int(p) for p in ring1]
+        ring_2 = [int(p) for p in ring2]
+
+        # get the cycle length
+        cycle_length = sum(self.phases[p].total_duration for p in ring_1)
+
+        assert cycle_length == sum(self.phases[p].total_duration for p in ring_2)
+
+        # update the split as a percentage
+        for p, split in splits.items():
+            ring_num = 1 if p in ring_1 else 2
+
+            old_dur = self.phases[p].maxDur
+            self.phases[p].maxDur = cycle_length * split
+            extra_time = self.phases[p].maxDur - old_dur
+
+            # distribute the extra time evenly to the other phases
+            for p in ring_1 if ring_num == 1 else ring_2:
+                self.phases[p].maxDur += -extra_time / len(
+                    ring_1 if ring_num == 1 else ring_2
+                )
+
+        assert cycle_length == sum(self.phases[p].total_duration for p in ring_1)
+
+        assert cycle_length == sum(self.phases[p].total_duration for p in ring_2)
 
 
 def read_nema_config(path: str, tlsID: str = "") -> OrderedDict:
@@ -203,3 +393,28 @@ def add_params_to_xml(
 
     # Overwrite the existing XML file
     tree.write(xml_file)
+
+
+if __name__ == "__main__":
+    # test the NEMALight class
+
+    tl = NEMALight.from_xml(
+        "/Users/max/Development/DOE-Project/airport-harper-calibration/simulation/additional/signals/63082003.NEMA.Coordinated.xml",
+        id="63082003",
+        programID="63082003_12",
+    )
+
+    tl.update_offset(22)
+
+    tl.update_coordinate_splits(
+        {
+            2: 0.5,
+            6: 0.5,
+        }
+    )
+
+    tl.update_phase(2, vehext=10)
+
+    res = tl.to_xml()
+
+    print(res)

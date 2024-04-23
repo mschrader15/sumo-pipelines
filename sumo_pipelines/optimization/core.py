@@ -26,7 +26,9 @@ def target_wrapper(
     ) -> dict:
         # this is some fuckery
         create_custom_resolvers()
-        local_global_config = OmegaConf.create(deepcopy(global_config))
+        local_global_config: OptimizationConfig = OmegaConf.create(
+            deepcopy(global_config)
+        )
 
         # update with the ray convention
         context = train.get_context()
@@ -44,13 +46,22 @@ def target_wrapper(
             if block is not None:
                 execute_pipe_block(block, local_global_config)
 
-            # execute the target function
-            res = local_global_config.Optimization.ObjectiveFn.function(
-                *args,
-                config=local_global_config,
-                function_config=local_global_config.Optimization.ObjectiveFn.config,
-                **kwargs,
-            )
+            # execute the target function. Don't actually have to have an objective fn...
+            if local_global_config.Optimization.ObjectiveFn.function is not None:
+                res = local_global_config.Optimization.ObjectiveFn.function(
+                    *args,
+                    config=local_global_config,
+                    function_config=local_global_config.Optimization.ObjectiveFn.config,
+                    **kwargs,
+                )
+
+            if local_global_config.Optimization.ObjectiveFn.report_config:
+                train.report(
+                    OmegaConf.to_container(
+                        local_global_config.Optimization.ObjectiveFn.config,
+                        resolve=True,
+                    ),
+                )
 
             # try to execute the cleanup pipeline
             block = get_pipeline_by_name(local_global_config, "Cleanup")
@@ -62,7 +73,7 @@ def target_wrapper(
                     local_global_config.Optimization.ObjectiveFn.additional_returns
                 )
 
-        return res
+        # return res
 
     return optimize_me
 

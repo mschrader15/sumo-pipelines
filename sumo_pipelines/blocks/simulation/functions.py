@@ -1,3 +1,4 @@
+import functools
 import socket
 import subprocess
 from contextlib import closing, redirect_stdout
@@ -89,7 +90,7 @@ def run_sumo_fast_fcd(config: SimulationConfig, parent_config: DictConfig) -> No
 
     sumo_cmd = config.make_cmd(config)
 
-    ind = sumo_cmd.index("--fcd-output")
+    ind = sumo_cmd.index("--fcd-output") if "--fcd-output" in sumo_cmd else -1
     if ind == -1:
         raise ValueError("No fcd-output flag found in sumo command")
 
@@ -97,19 +98,47 @@ def run_sumo_fast_fcd(config: SimulationConfig, parent_config: DictConfig) -> No
     sumo_cmd.pop(ind)
     output_file = sumo_cmd.pop(ind)
 
+    # check if collisions are desired
+    ind = (
+        sumo_cmd.index("--fcd-output.collisions")
+        if "--fcd-output.collisions" in sumo_cmd
+        else -1
+    )
+    collisions = False
+    if ind != -1:
+        sumo_cmd.pop(ind)
+        collisions = True
+
+    # check if leader is desired
+    ind = (
+        sumo_cmd.index("--fcd-output.leader")
+        if "--fcd-output.leader" in sumo_cmd
+        else -1
+    )
+    leader = False
+    if ind != -1:
+        sumo_cmd.pop(ind)
+        leader = True
+
     if not (output_file.endswith(".parquet") or output_file.endswith(".prq")):
         raise ValueError("Output file must be a parquet file")
+
+    func = functools.partial(
+        traci_vehicle_state_runner,
+        sumo_cmd,
+        config.warmup_time,
+        output_file,
+        include_collision=collisions,
+        include_leader=leader,
+    )
 
     if config.simulation_output:
         with open(config.simulation_output, "w") as f:
             f.write(" ".join(sumo_cmd))
             with redirect_stdout(f):
-                traci_vehicle_state_runner(sumo_cmd, config.warmup_time, output_file)
+                func()
     else:
-        traci_vehicle_state_runner(
-            sumo_cmd,
-            config.warmup_time,
-        )
+        func()
 
 
 def run_sumo_socket_listeners(

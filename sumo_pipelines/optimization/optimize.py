@@ -52,7 +52,7 @@ def run_optimization_core(config_obj: OptimizationConfig, smoke_test: bool):
         config_obj.Blocks.SimulationConfig.gui = False
 
     def trial_name_creator(trial):
-        return f"{config_obj.Metadata.name}_{config_obj.Optimization.ObjectiveFn.function.__name__}_{trial.trial_id}"
+        return f"{trial.trial_id}"
 
     def trial_dirname_creator(trial):
         return trial_name_creator(trial)

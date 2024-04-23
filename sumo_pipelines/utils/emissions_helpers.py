@@ -154,6 +154,101 @@ def read_vehicle_file(data_path: str, emission_class):
     return vehicle_data
 
 
+@lru_cache(maxsize=128)
+def get_max_fc(
+    data_path: str,
+    emission_class: str,
+) -> dict:
+    # file looks like this:
+    """
+    cp_norm(rated),FC
+        [-],[g/h/kWrated]
+        Pdrive (Engine)= 156.3425,Extrapolation: Pe: -0.2
+        idle,16.58278
+        -0.2,0
+        -0.1,3.704487
+        0,10.14675
+        0.1,28.73112
+        0.2,45.0095
+        0.3,63.09936
+        0.4,83.91012
+        0.5,104.7304
+        0.6,126.562
+        0.7,143.5274
+        0.8000001,160.0402
+        0.9000001,180.7397
+        1,200.8281
+    """
+    file = f"{data_path}/{emission_class}_FC.csv"
+
+    assert os.path.exists(file), f"File does not exist! ({emission_class}_FC.csv)"
+
+    with open(file) as f:
+        # just read that last line with text
+        s = f.read().strip().split("\n")[-1]
+
+    # get the values
+    values = s.split(",")
+    return {
+        "cp_norm": float(values[0]),
+        "FC": float(values[1])
+        * 1e3
+        * 1
+        / 3600,  # g/h/kWrated -> g/s/kWrated -> mg/s/kWrated
+    }
+
+
+def calc_normalized_fc(
+    df: pl.DataFrame,
+    fc_col: str,
+    output_col: str,
+    emission_class_column: str = "eclass",
+    emissions_data_path: Optional[str] = None,
+) -> pl.DataFrame:
+    if emissions_data_path is None:
+        emissions_data_path = os.path.join(
+            os.environ["SUMO_HOME"],
+            "data/emissions",
+        )
+
+    assert (
+        df[emission_class_column].str.contains("PHEMlight/").all()
+    ), "Only PHEMLight (not V5) emission classes are supported"
+
+    norm_constants = {}
+
+    for d in df[emission_class_column].unique():
+        mg_s_kw = get_max_fc(emissions_data_path, d)["FC"]
+        # case PollutantsInterface::FUEL: {
+        #     if (myVolumetricFuel && fuelType == PHEMlightdll::Constants::strDiesel) { // divide by average diesel density of 836 g/l
+        #         return getEmission(oldCep, currCep, "FC", power, corrSpeed) / 836. / SECONDS_PER_HOUR * 1000.;
+        #     }
+        #     if (myVolumetricFuel && fuelType == PHEMlightdll::Constants::strGasoline) { // divide by average gasoline density of 742 g/l
+        #         return getEmission(oldCep, currCep, "FC", power, corrSpeed) / 742. / SECONDS_PER_HOUR * 1000.;
+        #     }
+        #     if (fuelType == PHEMlightdll::Constants::strBEV) {
+        #         return 0.;
+        #     }
+        #     return getEmission(oldCep, currCep, "FC", power, corrSpeed) / SECONDS_PER_HOUR * 1000.; // still in mg even if myVolumetricFuel is set!
+        # }
+        max_power = float(read_vehicle_file(emissions_data_path, d)["rated_power"])
+
+        norm_constants[d] = mg_s_kw * max_power  # -> mg/s/kW -> mg/s
+
+    df = df.with_columns(
+        (
+            pl.col(fc_col)
+            / pl.col(emission_class_column).replace(
+                norm_constants, return_dtype=pl.Float32()
+            )
+        ).alias(output_col)
+    )
+
+    assert df[output_col].max() <= 1, "Normalized FC should be less than 1"
+
+    return df
+
+
 def calc_instant_power(
     df: pl.DataFrame,
     accel_col: str,
