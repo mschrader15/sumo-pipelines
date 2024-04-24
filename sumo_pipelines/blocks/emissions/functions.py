@@ -3,6 +3,7 @@ import re
 from pathlib import Path
 
 import numpy as np
+from omegaconf import DictConfig
 
 from sumo_pipelines.utils.emissions_helpers import calc_normalized_fc
 from sumo_pipelines.utils.geo_helpers import get_polygon, is_inside_sm_parallel
@@ -220,7 +221,11 @@ def fast_tripinfo_fuel(config: TripInfoTotalFuelConfig, *args, **kwargs) -> None
 
 
 def emissions_table_to_total(
-    config: EmissionsTableFuelTotalConfig, return_df: bool = False, *args, **kwargs
+    config: EmissionsTableFuelTotalConfig,
+    _config: DictConfig,
+    return_df: bool = False,
+    *args,
+    **kwargs,
 ) -> None:
     import polars as pl
 
@@ -278,7 +283,7 @@ def emissions_table_to_total(
         )
     )
 
-    if return_df:
+    if return_df is True:
         return df.collect()
 
     df = df.select(
