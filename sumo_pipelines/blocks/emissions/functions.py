@@ -220,7 +220,7 @@ def fast_tripinfo_fuel(config: TripInfoTotalFuelConfig, *args, **kwargs) -> None
 
 
 def emissions_table_to_total(
-    config: EmissionsTableFuelTotalConfig, *args, **kwargs
+    config: EmissionsTableFuelTotalConfig, return_df: bool = False, *args, **kwargs
 ) -> None:
     import polars as pl
 
@@ -276,18 +276,21 @@ def emissions_table_to_total(
                 "fuel_gasoline_e"
             ),
         )
-        .select(
-            [
-                pl.col("fuel_gasoline_e").sum().alias("fuel"),
-                pl.col("distance").sum().alias("distance"),
-                pl.col("id").n_unique().alias("id"),
-                pl.col("time_loss").last().over("id").sum().alias("time_loss"),
-                pl.col("delay").mean().alias("average_delay"),
-                pl.col("fuel_normed").mean().alias("average_normed_fc"),
-            ]
-        )
-        .collect()
     )
+
+    if return_df:
+        return df.collect()
+
+    df = df.select(
+        [
+            pl.col("fuel_gasoline_e").sum().alias("fuel"),
+            pl.col("distance").sum().alias("distance"),
+            pl.col("id").n_unique().alias("id"),
+            pl.col("time_loss").last().over("id").sum().alias("time_loss"),
+            pl.col("delay").mean().alias("average_delay"),
+            pl.col("fuel_normed").mean().alias("average_normed_fc"),
+        ]
+    ).collect()
 
     config.total_fuel = float(df["fuel"][0]) / SUMO_GASOLINE_DENSITY
     config.total_distance = float(df["distance"][0])
