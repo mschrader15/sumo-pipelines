@@ -19,6 +19,7 @@ from .config import (
 
 SUMO_DIESEL_GRAM_TO_JOULE: float = 42.8e3
 SUMO_GASOLINE_GRAM_TO_JOULE: float = 43.4e3
+SUMO_GASOLINE_DENSITY: float = 740  # g/L
 
 pattern = (
     rb'id="(.+?)" eclass="\w+\/(\w+?)".+fuel="([\d\.]*)".+x="([\d\.]*)" y="([\d\.]*)"'
@@ -288,9 +289,12 @@ def emissions_table_to_total(
         .collect()
     )
 
-    config.total_fuel = float(df["fuel"][0])
+    config.total_fuel = float(df["fuel"][0]) / SUMO_GASOLINE_DENSITY
     config.total_distance = float(df["distance"][0])
     config.num_vehicles = int(df["id"][0])
     config.total_timeloss = float(df["time_loss"][0])
     config.average_delay = float(df["average_delay"][0])
     config.average_fc_normed = float(df["average_normed_fc"][0])
+    config.average_fc_l = (
+        float(df["fuel"][0] / df["id"][0]) / SUMO_GASOLINE_DENSITY
+    )  # g/veh -> L/veh

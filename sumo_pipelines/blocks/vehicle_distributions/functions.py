@@ -191,14 +191,14 @@ def create_simple_sampled_distribution(
     )
 
 
-def _sample_dist(param: ParamConfig, n: int) -> np.array:
+def _sample_dist(param: ParamConfig, n: int, seed: int = 42) -> np.array:
     dist = getattr(
         stats,
         param.distribution,
     )(**param.params)
 
     # first fast pass
-    vals = dist.rvs(n)
+    vals = dist.rvs(n, random_state=seed)
     if param.bounds:
 
         def get_ob() -> np.array:
@@ -223,7 +223,7 @@ def _sample_dist(param: ParamConfig, n: int) -> np.array:
 def create_simple_sampled_distribution_scipy(
     cf_config: SampledSimpleCFConfig, *args, **kwargs
 ) -> None:
-    np.random.seed(seed=int(cf_config.seed))
+    # np.random.seed(seed=int(cf_config.seed))
 
     param_dict = {}
     n = cf_config.num_samples
@@ -234,7 +234,7 @@ def create_simple_sampled_distribution_scipy(
                 str(v.val),
             ] * n
         else:
-            param_dict[k] = _sample_dist(v, n)
+            param_dict[k] = _sample_dist(v, n, seed=int(cf_config.seed))
 
         if v.transform:
             select_strs.append(v.transform)
