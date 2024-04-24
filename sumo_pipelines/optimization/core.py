@@ -127,6 +127,8 @@ def handle_results(res: tune.ResultGrid, config: OptimizationConfig):
                 res.get_best_result().config,
             )
             # save the config file
+            with open(output_path / "best_config.yaml", "w") as f:
+                f.write(OmegaConf.to_yaml(local_config, resolve=False))
 
 
 def final_cleanup(res: tune.ResultGrid, config: OptimizationConfig) -> None:

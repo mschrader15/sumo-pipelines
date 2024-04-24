@@ -71,6 +71,8 @@ def run_optimization_core(config_obj: OptimizationConfig, smoke_test: bool):
         config=config_obj,
     )
 
+    # save the config
+
     # run the optimization
     tuner: tune.Tuner = config_obj.Optimization.Tuner.gen_function(
         **config_obj.Optimization.Tuner.gen_function_kwargs,
