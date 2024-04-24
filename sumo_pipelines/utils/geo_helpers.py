@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional
 
 import numba
 import numpy as np
@@ -8,12 +9,17 @@ from sumolib.shapes import polygon
 
 def get_polygon(
     polygon_file,
+    poly_id: Optional[str] = None,
 ):
     if polygon_file:
         assert Path(polygon_file).exists(), "The polygon file does not exist"
 
         polygons = polygon.read(polygon_file)
-        assert len(polygons) == 1, "The polygon file should only contain one polygon"
+        if poly_id:
+            polygons = [p for p in polygons if p.id == poly_id]
+        assert (
+            len(polygons) == 1
+        ), f"The polygon file should only contain one polygon entry for id {poly_id}"
 
         return polygons[0].shape
     return None

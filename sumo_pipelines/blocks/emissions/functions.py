@@ -1,9 +1,11 @@
 import mmap
 import re
 from pathlib import Path
+from typing import Optional, Tuple, Union
 
 import numpy as np
-from omegaconf import DictConfig
+import polars as pl
+from omegaconf import DictConfig, OmegaConf
 
 from sumo_pipelines.utils.emissions_helpers import calc_normalized_fc
 from sumo_pipelines.utils.geo_helpers import get_polygon, is_inside_sm_parallel
@@ -220,32 +222,36 @@ def fast_tripinfo_fuel(config: TripInfoTotalFuelConfig, *args, **kwargs) -> None
     config.val = total_fuel
 
 
-def emissions_table_to_total(
-    config: EmissionsTableFuelTotalConfig,
-    _config: DictConfig,
-    return_df: bool = False,
+def emissions_table_to_total_no_conf(
+    input_file: Union[str, pl.DataFrame],
+    time_low_filter: float,
+    time_high_filter: float,
+    sim_step: float,
+    filter_polygon: Optional[str] = None,
+    over_cols: Tuple[str] = ("id",),
     *args,
     **kwargs,
-) -> None:
-    import polars as pl
-
+) -> pl.DataFrame:
     def _polygon_filter(
         df,
     ):
-        if config.filter_polygon:
+        if filter_polygon:
             return df.filter(
                 is_inside_sm_parallel(
                     df.select(pl.col("x"), pl.col("y")).to_numpy(),
-                    get_polygon(config.filter_polygon),
+                    get_polygon(filter_polygon),
                 )
             )
         return df
 
-    df = (
-        pl.scan_parquet(config.input_file)
-        .filter(
-            pl.col("time").is_between(config.time_low_filter, config.time_high_filter)
+    return (
+        (
+            input_file
+            if isinstance(input_file, (pl.LazyFrame, pl.DataFrame))
+            else pl.scan_parquet(input_file)
         )
+        .lazy()
+        .filter(pl.col("time").is_between(time_low_filter, time_high_filter))
         .collect()
         .pipe(
             _polygon_filter,
@@ -259,13 +265,13 @@ def emissions_table_to_total(
         .sort("time")
         .with_columns(
             [
-                (pl.col("fuel") * config.sim_step / 1e3).alias("fuel"),
+                (pl.col("fuel") * sim_step / 1e3).alias("fuel"),
                 (pl.col("x").diff() ** 2 + pl.col("y").diff() ** 2)
                 .sqrt()
-                .over("id")
+                .over(over_cols)
                 .fill_null(0)
                 .alias("distance"),
-                pl.col("time_loss").diff().over("id").fill_null(0).alias("delay"),
+                pl.col("time_loss").diff().over(over_cols).fill_null(0).alias("delay"),
             ]
         )
         .with_columns(
@@ -283,8 +289,16 @@ def emissions_table_to_total(
         )
     )
 
-    if return_df is True:
-        return df.collect()
+
+def emissions_table_to_total(
+    config: EmissionsTableFuelTotalConfig,
+    _config: DictConfig,
+    *args,
+    **kwargs,
+) -> None:
+    df = emissions_table_to_total_no_conf(
+        **OmegaConf.to_container(config, resolve=True),
+    )
 
     df = df.select(
         [

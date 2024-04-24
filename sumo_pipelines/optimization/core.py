@@ -3,6 +3,7 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any, Callable, Dict
 
+import numpy as np
 from omegaconf import OmegaConf
 from ray import train, tune
 
@@ -40,6 +41,19 @@ def target_wrapper(
             local_global_config.Optimization.SearchSpace, config
         )
 
+        empty_config = {
+            k: [] for k in local_global_config.Optimization.ObjectiveFn.config.keys()
+        }
+
+        def _update_mean(new_val_dict) -> dict:
+            for k, v in new_val_dict.items():
+                empty_config[k].append(v)
+            return {
+                k_new: op(v)
+                for k, v in empty_config.items()
+                for k_new, op in zip([k, f"{k}_std"], [np.mean, np.var])
+            }
+
         for _ in range(local_global_config.Optimization.ObjectiveFn.n_iterations):
             # execute the pre-processing pipeline
             block = get_pipeline_by_name(local_global_config, "Pre-Processing")
@@ -57,10 +71,12 @@ def target_wrapper(
 
             if local_global_config.Optimization.ObjectiveFn.report_config:
                 train.report(
-                    OmegaConf.to_container(
-                        local_global_config.Optimization.ObjectiveFn.config,
-                        resolve=True,
-                    ),
+                    _update_mean(
+                        OmegaConf.to_container(
+                            local_global_config.Optimization.ObjectiveFn.config,
+                            resolve=True,
+                        ),
+                    )
                 )
 
             # try to execute the cleanup pipeline

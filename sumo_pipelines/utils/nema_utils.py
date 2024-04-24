@@ -154,6 +154,10 @@ class NEMALight:
         self,
         splits: dict[int, float],
     ) -> None:
+        raise NotImplementedError(
+            "This method is not implemented yet. The below code is a work in progress."
+        )
+
         # get the coordinate phases
         coord_phases = self.params.get("coordinatePhases", "").value.split(",")
         if not coord_phases:
@@ -162,33 +166,50 @@ class NEMALight:
         # get the rings
         ring1 = self.params.get("ring1", "").value.split(",")
         ring2 = self.params.get("ring2", "").value.split(",")
-
-        # get the phase order
-        # barrierPhases = self.params.get("barrierPhases", "").split(",")
-        # barrier2Phases = self.params.get("barrier2Phases", "").split(",")
+        barrier_phases = self.params.get("barrierPhases", "").value.split(",")
+        barrier2_phases = self.params.get(
+            "barrier2Phases", self.params.get("coordinatePhases", "")
+        ).value.split(",")
 
         # construct a list of list of phases
-        ring_1 = [int(p) for p in ring1]
-        ring_2 = [int(p) for p in ring2]
+        ring_1 = [int(p) for p in ring1 if int(p) > 0]
+        ring_2 = [int(p) for p in ring2 if int(p) > 0]
+
+        barrier_mapping = {}
+        b1, b2 = 0, 0
+        for p1, p2 in zip(ring1, ring2):
+            barrier_mapping[int(p1)] = b1
+            barrier_mapping[int(p2)] = b2
+            if p1 in {barrier_phases[0], barrier2_phases[0]}:
+                b1 += 1
+            if p2 in {barrier_phases[1], barrier2_phases[1]}:
+                b2 += 1
 
         # get the cycle length
         cycle_length = sum(self.phases[p].total_duration for p in ring_1)
-
         assert cycle_length == sum(self.phases[p].total_duration for p in ring_2)
 
-        # update the split as a percentage
-        for p, split in splits.items():
-            ring_num = 1 if p in ring_1 else 2
+        total_greens = [
+            sum(self.phases[p].maxDur for p in ring_1),
+            sum(self.phases[p].maxDur for p in ring_2),
+        ]
 
-            old_dur = self.phases[p].maxDur
+        # update the split as a percentage
+        for ring_num, (p, split) in enumerate(splits.items()):
+            ring_num += 1
+
+            # self.phases[p].maxDur
             self.phases[p].maxDur = cycle_length * split
-            extra_time = self.phases[p].maxDur - old_dur
+            extra_time = total_greens[ring_num - 1] - sum(
+                self.phases[p].maxDur for p in [ring_1, ring_2][ring_num - 1]
+            )
 
             # distribute the extra time evenly to the other phases
-            for p in ring_1 if ring_num == 1 else ring_2:
-                self.phases[p].maxDur += -extra_time / len(
-                    ring_1 if ring_num == 1 else ring_2
-                )
+            for p_other in ring_1 if ring_num == 1 else ring_2:
+                if p != p_other:
+                    self.phases[p_other].maxDur += extra_time / (
+                        len(ring_1 if ring_num == 1 else ring_2) - 1
+                    )
 
         assert cycle_length == sum(self.phases[p].total_duration for p in ring_1)
 
@@ -399,9 +420,9 @@ if __name__ == "__main__":
     # test the NEMALight class
 
     tl = NEMALight.from_xml(
-        "/Users/max/Development/DOE-Project/airport-harper-calibration/simulation/additional/signals/63082003.NEMA.Coordinated.xml",
-        id="63082003",
-        programID="63082003_12",
+        "/Users/max/Development/DOE-Project/airport-harper-calibration/simulation/additional/signals/63082002.NEMA.Coordinated.xml",
+        id="63082002",
+        programID="63082002_12",
     )
 
     tl.update_offset(22)

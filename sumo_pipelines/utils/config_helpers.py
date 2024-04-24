@@ -303,7 +303,8 @@ def open_config_structured(
     # merge the structured config with the loaded config
     try:
         c = OmegaConf.merge(s, c)
-    except Exception:
+    except Exception as e:
+        print(e)
         # try to merge the sub configs at this point
         from sumo_pipelines.config import Blocks, MetaData, Pipeline  # noqa: F401
 

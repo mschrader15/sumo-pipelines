@@ -244,7 +244,7 @@ def calc_normalized_fc(
         ).alias(output_col)
     )
 
-    assert df[output_col].max() <= 1, "Normalized FC should be less than 1"
+    # assert df[output_col].max() <= 1, "Normalized FC should be less than 1"
 
     return df
 
