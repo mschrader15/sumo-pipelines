@@ -76,7 +76,7 @@ def create_distribution_table(
     _create_distribution_table(
         sampled_df,
         cf_config.vehicle_distribution_name,
-        write_columns=cf_config.write_columns,
+        write_columns=cf_config.write_parameters,
         save_path=cf_config.save_path,
     )
 

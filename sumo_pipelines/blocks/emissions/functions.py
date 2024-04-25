@@ -312,7 +312,7 @@ def emissions_table_to_total(
             pl.col("delay").mean().alias("average_delay"),
             pl.col("fuel_normed").mean().alias("average_normed_fc"),
         ]
-    ).collect()
+    )
 
     config.total_fuel = float(df["fuel"][0]) / SUMO_GASOLINE_DENSITY
     config.total_distance = float(df["distance"][0])
