@@ -19,6 +19,7 @@ class FuelTotalConfig:
 @dataclass
 class EmissionsTableFuelTotalConfig:
     input_file: str
+    save_file_path: Any = field(default=None)
     sim_step: Any = field(default="${Blocks.SimulationConfig.step_length}")
     total_fuel: float = MISSING
     total_distance: float = MISSING

@@ -300,6 +300,9 @@ def emissions_table_to_total(
         **OmegaConf.to_container(config, resolve=True),
     )
 
+    if config.save_file_path:
+        df.sink_parquet(config.save_file_path)
+
     df = df.select(
         [
             pl.col("fuel_gasoline_e").sum().alias("fuel"),

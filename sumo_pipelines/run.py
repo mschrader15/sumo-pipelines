@@ -52,9 +52,7 @@ def _launch_ray(c: PipelineConfig, debug: bool):
             )
 
         if ray.is_initialized():
-            ray.init(
-                address="auto",
-            )
+            ray.init(address="auto", ignore_reinit_error=True)
         else:
             ray.init(
                 local_mode=debug,

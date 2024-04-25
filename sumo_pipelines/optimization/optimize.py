@@ -42,7 +42,11 @@ def initalize_ray(smoke_test: bool):
     # override the resources
     # https://docs.ray.io/en/latest/tune/api_docs/tune.html#tune.run
     # try:
-    ray.init(num_cpus=1 if smoke_test else None, local_mode=smoke_test)
+    ray.init(
+        num_cpus=1 if smoke_test else None,
+        local_mode=smoke_test,
+        ignore_reinit_error=True,
+    )
 
 
 def run_optimization_core(config_obj: OptimizationConfig, smoke_test: bool):
