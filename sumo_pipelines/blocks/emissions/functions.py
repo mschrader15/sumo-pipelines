@@ -298,10 +298,10 @@ def emissions_table_to_total(
 ) -> None:
     df = emissions_table_to_total_no_conf(
         **OmegaConf.to_container(config, resolve=True),
-    )
+    ).collect()
 
     if config.save_file_path:
-        df.sink_parquet(config.save_file_path)
+        df.write_parquet(config.save_file_path)
 
     df = df.select(
         [

@@ -31,6 +31,8 @@ def target_wrapper(
             deepcopy(global_config)
         )
 
+        # should I re-seed the random number generators???
+
         # update with the ray convention
         context = train.get_context()
         local_global_config.Metadata.run_id = context.get_trial_id()
