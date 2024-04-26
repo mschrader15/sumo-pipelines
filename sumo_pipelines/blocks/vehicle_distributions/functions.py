@@ -56,6 +56,8 @@ def _create_distribution_table(
 def create_distribution_table(
     cf_config: CFTableConfig,
     config: DictConfig,
+    *args,
+    **kwargs,
 ) -> None:
     if cf_config.table in DUMB_OBJECT_STORE:
         samples = DUMB_OBJECT_STORE[cf_config.table].clone()
