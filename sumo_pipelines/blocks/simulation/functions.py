@@ -50,7 +50,9 @@ def make_cmd(
     )
 
 
-def run_sumo(config: SimulationConfig, parent_config: DictConfig) -> None:
+def run_sumo(
+    config: SimulationConfig, parent_config: DictConfig, *args, **kwargs
+) -> None:
     """
     This is a standalone function that runs sumo and returns nothing.
 
@@ -74,7 +76,9 @@ def run_sumo(config: SimulationConfig, parent_config: DictConfig) -> None:
         raise RuntimeError("Sumo failed to run")
 
 
-def run_sumo_fast_fcd(config: SimulationConfig, parent_config: DictConfig) -> None:
+def run_sumo_fast_fcd(
+    config: SimulationConfig, parent_config: DictConfig, *args, **kwargs
+) -> None:
     """
     This is a standalone function that runs sumo and returns nothing.
 
@@ -142,7 +146,7 @@ def run_sumo_fast_fcd(config: SimulationConfig, parent_config: DictConfig) -> No
 
 
 def run_sumo_socket_listeners(
-    config: SimulationConfig, parent_config: DictConfig
+    config: SimulationConfig, parent_config: DictConfig, *args, **kwargs
 ) -> None:
     """
     This is a standalone function that runs sumo and returns nothing.
@@ -180,8 +184,7 @@ def run_sumo_socket_listeners(
 
 
 def run_sumo_function(
-    config: SimulationConfig,
-    parent_config: DictConfig,
+    config: SimulationConfig, parent_config: DictConfig, *args, **kwargs
 ) -> None:
     # call the runner function
     config.runner_function(parent_config)

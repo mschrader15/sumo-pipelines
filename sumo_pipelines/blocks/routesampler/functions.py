@@ -44,12 +44,14 @@ def write_turn_file_input(
         .groupby_dynamic(
             index_column=turn_file_config.time_column,
             every=f"{int(turn_file_config.agg_interval)}s",
+            period=f"{int(turn_file_config.agg_interval)}s",
             by=["to", "from"],
         )
         .agg(pl.col("volume").sum())
         .with_columns(
             # probabilisticall round to an integer
             pl.col("volume")
+            .fill_null(0)
             .map(
                 lambda x: np.floor(x.to_numpy())
                 + 1

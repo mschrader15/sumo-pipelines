@@ -311,6 +311,10 @@ def emissions_table_to_total(
             pl.col("time_loss").last().over("id").sum().alias("time_loss"),
             pl.col("delay").mean().alias("average_delay"),
             pl.col("fuel_normed").mean().alias("average_normed_fc"),
+            pl.col("speed").mean().alias("mean_speed"),
+            (pl.col("time").max() - pl.col("time").min())
+            .over(pl.col("id"))
+            .alias("mean_travel_time"),
         ]
     )
 
@@ -323,3 +327,5 @@ def emissions_table_to_total(
     config.average_fc_l = (
         float(df["fuel"][0] / df["id"][0]) / SUMO_GASOLINE_DENSITY
     )  # g/veh -> L/veh
+    config.average_speed = float(df["mean_speed"][0])
+    config.average_travel_time = float(df["mean_travel_time"][0])

@@ -31,6 +31,9 @@ def target_wrapper(
             deepcopy(global_config)
         )
 
+        # create a random state object
+        rnd_state = np.random.RandomState(local_global_config.Metadata.random_seed)
+
         # should I re-seed the random number generators???
 
         # update with the ray convention
@@ -60,7 +63,7 @@ def target_wrapper(
             # execute the pre-processing pipeline
             block = get_pipeline_by_name(local_global_config, "Pre-Processing")
             if block is not None:
-                execute_pipe_block(block, local_global_config)
+                execute_pipe_block(block, local_global_config, random_state=rnd_state)
 
             # execute the target function. Don't actually have to have an objective fn...
             if local_global_config.Optimization.ObjectiveFn.function is not None:

@@ -164,6 +164,8 @@ def get_pipeline_by_name(config: Pipeline, name: str) -> Tuple[PipeBlock, str]:
 def execute_pipe_block(
     block: PipeBlock,
     main_config: Pipeline,
+    *args,
+    **kwargs,
 ) -> None:
     assert (
         len(block.producers) == 0
@@ -179,4 +181,4 @@ def execute_pipe_block(
 
     # execute the functions
     for f, c in functions:
-        f(c, main_config)
+        f(c, main_config, *args, **kwargs)

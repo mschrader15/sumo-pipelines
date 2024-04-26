@@ -32,6 +32,8 @@ class EmissionsTableFuelTotalConfig:
     time_low_filter: float = field(default=0)
     time_high_filter: float = field(default=1e9)
     filter_polygon: Any = field(default=None)
+    average_speed: Any = field(default=None)
+    average_travel_time: Any = field(default=None)
 
 
 @dataclass

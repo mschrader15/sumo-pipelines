@@ -16,9 +16,7 @@ from .config import (
 )
 
 
-def update_output_file(
-    config: XMLChangeOutputConfig, parent_config: DictConfig
-) -> None:
+def update_output_file(config: XMLChangeOutputConfig, *args, **kwargs) -> None:
     """
     This function takes an xml file that has an output path (like SUMO's detector files),
     and changes the target output destination to the target path.
