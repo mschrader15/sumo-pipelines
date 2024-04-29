@@ -597,17 +597,17 @@ if __name__ == "__main__":
     # test the NEMALight class
 
     tl = NEMALight.from_xml(
-        "/Users/max/Development/DOE-Project/airport-harper-calibration/simulation/additional/signals/63082004.NEMA.Coordinated.xml",
-        id="63082004",
-        programID="63082004_12",
+        "/Users/max/Development/DOE-Project/airport-harper-calibration/simulation/additional/signals/63082002.NEMA.Coordinated.xml",
+        id="63082002",
+        programID="63082002_12",
     )
 
     tl.update_offset(22)
 
     tl.update_coordinate_splits(
         {
-            2: (0.6869433365740374 // 0.01) * 0.01,
-            6: (0.72 // 0.01) * 0.01,
+            2: 0.5764271155153771,
+            6: 0.85,
         }
     )
 
