@@ -9,6 +9,11 @@ from typing import Dict, Union
 import polars as pl
 import sumolib
 
+try:
+    import iteround
+except ImportError:
+    iteround = None
+
 
 @dataclass
 class Phase:
@@ -243,6 +248,15 @@ class NEMALight:
                 if _p.name != p
             }
 
+            # rounds = list(add_time.values())
+
+            add_time = {
+                _p: rounded_time
+                for _p, rounded_time in zip(
+                    add_time.keys(), iteround.saferound(add_time.values(), places=1)
+                )
+            }
+
             for _p, t in add_time.items():
                 new_phases[ring_num][_p].maxDur += t
 
@@ -332,6 +346,13 @@ class NEMALight:
             )
             * distribute_time
             for _p in bad_phases
+        }
+
+        add_time = {
+            _p: rounded_time
+            for _p, rounded_time in zip(
+                add_time.keys(), iteround.saferound(add_time.values(), places=1)
+            )
         }
 
         for k, v in add_time.items():
@@ -572,40 +593,40 @@ def add_params_to_xml(
     tree.write(xml_file)
 
 
-# if __name__ == "__main__":
-#     # test the NEMALight class
+if __name__ == "__main__":
+    # test the NEMALight class
 
-#     tl = NEMALight.from_xml(
-#         "/Users/max/Development/DOE-Project/airport-harper-calibration/simulation/additional/signals/63082004.NEMA.Coordinated.xml",
-#         id="63082004",
-#         programID="63082004_12",
-#     )
+    tl = NEMALight.from_xml(
+        "/Users/max/Development/DOE-Project/airport-harper-calibration/simulation/additional/signals/63082004.NEMA.Coordinated.xml",
+        id="63082004",
+        programID="63082004_12",
+    )
 
-#     tl.update_offset(22)
+    tl.update_offset(22)
 
-#     tl.update_coordinate_splits(
-#         {
-#             2: 0.73,
-#             6: 0.73,
-#         }
-#     )
+    tl.update_coordinate_splits(
+        {
+            2: (0.6869433365740374 // 0.01) * 0.01,
+            6: (0.72 // 0.01) * 0.01,
+        }
+    )
 
-#     tl.update_coordinate_splits(
-#         {
-#             4: 0.2,
-#             8: 0.1,
-#         }
-#     )
+    # tl.update_coordinate_splits(
+    #     {
+    #         4: 0.2,
+    #         8: 0.1,
+    #     }
+    # )
 
-#     # tl.update_coordinate_splits(
-#     #     {
-#     #         1: 0.5,
-#     #         5: 0.5,
-#     #     }
-#     # )
+    # tl.update_coordinate_splits(
+    #     {
+    #         1: 0.5,
+    #         5: 0.5,
+    #     }
+    # )
 
-#     tl.update_phase(2, vehext=10)
+    tl.update_phase(2, vehext=10)
 
-#     res = tl.to_xml()
+    res = tl.to_xml()
 
-#     print(res)
+    print(res)
