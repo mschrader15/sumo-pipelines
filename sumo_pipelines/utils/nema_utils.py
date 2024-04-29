@@ -1,6 +1,7 @@
 import os
 import xml.etree.ElementTree as ET
 from collections import OrderedDict
+from copy import deepcopy
 from dataclasses import dataclass, fields
 from os import PathLike
 from typing import Dict, Union
@@ -47,6 +48,12 @@ class Phase:
         self,
     ) -> float:
         return self.maxDur + self.yellow + self.red
+
+    @property
+    def yellow_red_duration(
+        self,
+    ) -> float:
+        return self.red + self.yellow
 
 
 @dataclass
@@ -154,30 +161,34 @@ class NEMALight:
         self,
         splits: dict[int, float],
     ) -> None:
-        raise NotImplementedError(
-            "This method is not implemented yet. The below code is a work in progress."
-        )
-
         # get the coordinate phases
         coord_phases = self.params.get("coordinatePhases", "").value.split(",")
         if not coord_phases:
             raise ValueError("No coordinate phases found in the NEMA configuration")
 
-        # get the rings
-        ring1 = self.params.get("ring1", "").value.split(",")
-        ring2 = self.params.get("ring2", "").value.split(",")
-        barrier_phases = self.params.get("barrierPhases", "").value.split(",")
-        barrier2_phases = self.params.get(
-            "barrier2Phases", self.params.get("coordinatePhases", "")
-        ).value.split(",")
+        barrier_phases = list(
+            map(int, self.params.get("barrierPhases", "").value.split(","))
+        )
+        barrier2_phases = list(
+            map(
+                int,
+                self.params.get(
+                    "barrier2Phases", self.params.get("coordinatePhases", "")
+                ).value.split(","),
+            )
+        )
 
         # construct a list of list of phases
-        ring_1 = [int(p) for p in ring1 if int(p) > 0]
-        ring_2 = [int(p) for p in ring2 if int(p) > 0]
+        ring_1 = [
+            int(p) for p in self.params.get("ring1", "").value.split(",") if int(p) > 0
+        ]
+        ring_2 = [
+            int(p) for p in self.params.get("ring2", "").value.split(",") if int(p) > 0
+        ]
 
         barrier_mapping = {}
         b1, b2 = 0, 0
-        for p1, p2 in zip(ring1, ring2):
+        for p1, p2 in zip(ring_1, ring_2):
             barrier_mapping[int(p1)] = b1
             barrier_mapping[int(p2)] = b2
             if p1 in {barrier_phases[0], barrier2_phases[0]}:
@@ -189,31 +200,176 @@ class NEMALight:
         cycle_length = sum(self.phases[p].total_duration for p in ring_1)
         assert cycle_length == sum(self.phases[p].total_duration for p in ring_2)
 
-        total_greens = [
-            sum(self.phases[p].maxDur for p in ring_1),
-            sum(self.phases[p].maxDur for p in ring_2),
-        ]
+        phase_holder = {
+            0: {p: deepcopy(self.phases[p]) for p in ring_1},
+            1: {p: deepcopy(self.phases[p]) for p in ring_2},
+        }
 
-        # update the split as a percentage
+        # update the main side of the barrier
+        b_num = None
+        for p, _ in splits.items():
+            if b_num is not None:
+                assert barrier_mapping[p] == b_num
+            else:
+                b_num = barrier_mapping[p]
+
+        new_phases = deepcopy(phase_holder)
+        barrier_adjustments = []
         for ring_num, (p, split) in enumerate(splits.items()):
-            ring_num += 1
+            new_phases[ring_num][p].maxDur = (
+                cycle_length * split - phase_holder[ring_num][p].yellow_red_duration
+            ) // 1
 
-            # self.phases[p].maxDur
-            self.phases[p].maxDur = cycle_length * split
-            extra_time = total_greens[ring_num - 1] - sum(
-                self.phases[p].maxDur for p in [ring_1, ring_2][ring_num - 1]
+            # include
+            extra_time = (
+                # include
+                cycle_length
+                - sum(
+                    new_phases[ring_num][_p].total_duration
+                    for _p in new_phases[ring_num].keys()
+                )
             )
 
-            # distribute the extra time evenly to the other phases
-            for p_other in ring_1 if ring_num == 1 else ring_2:
-                if p != p_other:
-                    self.phases[p_other].maxDur += extra_time / (
-                        len(ring_1 if ring_num == 1 else ring_2) - 1
+            distribute_time = sum(
+                _p.maxDur - _p.minDur
+                for _p in phase_holder[ring_num].values()
+                if _p.name != p
+            )
+            assert -1 * extra_time < distribute_time
+
+            add_time = {
+                _p.name: ((_p.maxDur - _p.minDur) / distribute_time) * extra_time
+                for _p in phase_holder[ring_num].values()
+                if _p.name != p
+            }
+
+            for _p, t in add_time.items():
+                new_phases[ring_num][_p].maxDur += t
+
+                # if new_phases[_p].maxDur
+
+            barrier_split = sum(
+                _p.total_duration
+                for _p in new_phases[ring_num].values()
+                if barrier_mapping[_p.name] == b_num
+            )
+            barrier_adjustments.append(barrier_split)
+
+        max_barrier = max(barrier_adjustments)
+
+        for ring_num, ((_, _), b_length) in enumerate(
+            zip(splits.items(), barrier_adjustments)
+        ):
+            if b_length < max_barrier:
+                update_phases = [
+                    _p
+                    for _p in new_phases[ring_num].values()
+                    if barrier_mapping[_p.name] == b_num
+                ]
+
+                # assert len(update_phases) == 1
+
+                update_phase = update_phases[0]
+
+                update_phase.maxDur = (
+                    max_barrier
+                    - sum(
+                        _p.total_duration
+                        for _p in new_phases[ring_num].values()
+                        if barrier_mapping[_p.name] == b_num
+                        and _p.name != update_phase.name
                     )
+                    - update_phase.yellow
+                    - update_phase.red
+                )
 
-        assert cycle_length == sum(self.phases[p].total_duration for p in ring_1)
+                assert update_phase.maxDur >= update_phase.minDur
 
-        assert cycle_length == sum(self.phases[p].total_duration for p in ring_2)
+        # update the side street barrier
+        # other_barrier_length = cycle_length - max_barrier
+        other_barrier = 1 - b_num
+        # one of the rings should now add up to the cycle length
+        good_r = None
+        new_barrier_time = 0
+        for good_ring, r_ in enumerate([ring_1, ring_2]):
+            if (
+                round(sum(new_phases[good_ring][p].total_duration for p in r_), 1)
+                == cycle_length
+            ):
+                good_r = r_
+                new_barrier_time += sum(
+                    [
+                        new_phases[good_ring][r__].total_duration
+                        for r__ in r_
+                        if barrier_mapping[r__] == other_barrier
+                    ]
+                )
+                break
+
+        assert good_r is not None
+
+        # update the bad ring
+        bad_ring = [ring_1, ring_2][1 - good_ring]
+        bad_phases = [p for p in bad_ring if barrier_mapping[p] == other_barrier]
+
+        distribute_time = new_barrier_time - sum(
+            new_phases[1 - good_ring][p].total_duration for p in bad_phases
+        )
+        available_time = sum(
+            new_phases[1 - good_ring][_p].maxDur - new_phases[1 - good_ring][_p].minDur
+            for _p in bad_phases
+        )
+
+        assert -1 * distribute_time <= available_time
+
+        add_time = {
+            _p: (
+                (
+                    new_phases[1 - good_ring][_p].maxDur
+                    - new_phases[1 - good_ring][_p].minDur
+                )
+                / available_time
+            )
+            * distribute_time
+            for _p in bad_phases
+        }
+
+        for k, v in add_time.items():
+            new_phases[1 - good_ring][k].maxDur += v
+
+        assert cycle_length == round(
+            sum(p.total_duration for p in new_phases[0].values()), 1
+        )
+        assert cycle_length == round(
+            sum(p.total_duration for p in new_phases[1].values()), 1
+        )
+
+        new_phases = {
+            p.name: p for ring_dict in new_phases.values() for p in ring_dict.values()
+        }
+
+        self.phases = deepcopy(new_phases)
+
+        # # update the split as a percentage
+        # for ring_num, (p, split) in enumerate(splits.items()):
+        #     ring_num += 1
+
+        #     # self.phases[p].maxDur
+        #     self.phases[p].maxDur = cycle_length * split
+        #     extra_time = total_greens[ring_num - 1] - sum(
+        #         self.phases[p].maxDur for p in [ring_1, ring_2][ring_num - 1]
+        #     )
+
+        #     # distribute the extra time evenly to the other phases
+        #     for p_other in ring_1 if ring_num == 1 else ring_2:
+        #         if p != p_other:
+        #             self.phases[p_other].maxDur += extra_time / (
+        #                 len(ring_1 if ring_num == 1 else ring_2) - 1
+        #             )
+
+        # assert cycle_length == sum(self.phases[p].total_duration for p in ring_1)
+
+        # assert cycle_length == sum(self.phases[p].total_duration for p in ring_2)
 
 
 def read_nema_config(path: str, tlsID: str = "") -> OrderedDict:
@@ -416,26 +572,40 @@ def add_params_to_xml(
     tree.write(xml_file)
 
 
-if __name__ == "__main__":
-    # test the NEMALight class
+# if __name__ == "__main__":
+#     # test the NEMALight class
 
-    tl = NEMALight.from_xml(
-        "/Users/max/Development/DOE-Project/airport-harper-calibration/simulation/additional/signals/63082002.NEMA.Coordinated.xml",
-        id="63082002",
-        programID="63082002_12",
-    )
+#     tl = NEMALight.from_xml(
+#         "/Users/max/Development/DOE-Project/airport-harper-calibration/simulation/additional/signals/63082004.NEMA.Coordinated.xml",
+#         id="63082004",
+#         programID="63082004_12",
+#     )
 
-    tl.update_offset(22)
+#     tl.update_offset(22)
 
-    tl.update_coordinate_splits(
-        {
-            2: 0.5,
-            6: 0.5,
-        }
-    )
+#     tl.update_coordinate_splits(
+#         {
+#             2: 0.73,
+#             6: 0.73,
+#         }
+#     )
 
-    tl.update_phase(2, vehext=10)
+#     tl.update_coordinate_splits(
+#         {
+#             4: 0.2,
+#             8: 0.1,
+#         }
+#     )
 
-    res = tl.to_xml()
+#     # tl.update_coordinate_splits(
+#     #     {
+#     #         1: 0.5,
+#     #         5: 0.5,
+#     #     }
+#     # )
 
-    print(res)
+#     tl.update_phase(2, vehext=10)
+
+#     res = tl.to_xml()
+
+#     print(res)
