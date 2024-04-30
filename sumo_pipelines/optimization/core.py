@@ -46,13 +46,14 @@ def target_wrapper(
             local_global_config.Optimization.SearchSpace, config
         )
 
-        empty_config = {
-            k: [] for k in local_global_config.Optimization.ObjectiveFn.config.keys()
-        }
+        empty_config = {}
 
         def _update_mean(new_val_dict) -> dict:
             for k, v in new_val_dict.items():
-                empty_config[k].append(v)
+                if k in empty_config:
+                    empty_config[k].append(v)
+                else:
+                    empty_config[k] = [v]
             return {
                 k_new: op(v)
                 for k, v in empty_config.items()
@@ -73,16 +74,18 @@ def target_wrapper(
                     function_config=local_global_config.Optimization.ObjectiveFn.config,
                     **kwargs,
                 )
-
             if local_global_config.Optimization.ObjectiveFn.report_config:
-                train.report(
-                    _update_mean(
-                        OmegaConf.to_container(
-                            local_global_config.Optimization.ObjectiveFn.config,
-                            resolve=True,
-                        ),
+                res = _update_mean(
+                    OmegaConf.to_container(
+                        local_global_config.Optimization.ObjectiveFn.config,
+                        resolve=True,
                     )
                 )
+            else:
+                res = _update_mean(res)
+
+            if local_global_config.Optimization.ObjectiveFn.return_intermediate:
+                train.report(res)
 
             # try to execute the cleanup pipeline
             block = get_pipeline_by_name(local_global_config, "Cleanup")
@@ -94,7 +97,8 @@ def target_wrapper(
                     local_global_config.Optimization.ObjectiveFn.additional_returns
                 )
 
-        # return res
+        if not local_global_config.Optimization.ObjectiveFn.return_intermediate:
+            train.report(res)
 
     return optimize_me
 

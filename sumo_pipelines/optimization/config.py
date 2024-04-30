@@ -39,6 +39,7 @@ class TunerConfig:
 class ObjectiveConfig:
     function: Any
     n_iterations: int = 1
+    return_intermediate: bool = field(default=False)
     report_config: bool = field(default=False)
     config: Dict[str, Any] = field(default_factory=dict)
     additional_returns: Dict[str, Any] = field(default_factory=dict)
