@@ -19,6 +19,8 @@
 
 #pragma once
 
+
+
 std::shared_ptr<parquet::schema::GroupNode> GetFCDOutputSchema(
     bool include_leader = true,
     bool include_collision = true

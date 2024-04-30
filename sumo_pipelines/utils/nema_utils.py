@@ -4,7 +4,7 @@ from collections import OrderedDict
 from copy import deepcopy
 from dataclasses import dataclass, fields
 from os import PathLike
-from typing import Dict, Union
+from typing import Dict, List, Union
 
 import polars as pl
 import sumolib
@@ -106,6 +106,9 @@ class NEMALight:
     def add_param(self, param: Param):
         self.params[param.key] = param
 
+    def get_phase_list(self) -> List[Phase]:
+        return list(self.phases.values())
+
     def to_xml(
         self,
     ) -> str:
@@ -133,9 +136,12 @@ class NEMALight:
 
         tl = None
         for tl in re.finditer(r"<tlLogic (.*)>", xml):
-            tl = cls(
-                **dict([g.split("=") for g in tl.group(1).replace('"', "").split(" ")])
+            params = dict(
+                [g.split("=") for g in tl.group(1).replace('"', "").split(" ")]
             )
+            if "offset" not in params:
+                params["offset"] = 0
+            tl = cls(**params)
             if (tl.id == id) and (tl.programID == programID):
                 break
 
@@ -161,6 +167,62 @@ class NEMALight:
     def update_phase(self, phase_name: int, **params):
         for k, v in params.items():
             setattr(self.phases[phase_name], k, v)
+
+    def get_valid_phase_combos(
+        self,
+    ) -> None:
+        barrier_phases = tuple(
+            map(int, self.params.get("barrierPhases", "").value.split(","))
+        )
+        barrier2_phases = tuple(
+            map(
+                int,
+                self.params.get(
+                    "barrier2Phases", self.params.get("coordinatePhases", "")
+                ).value.split(","),
+            )
+        )
+
+        coordinated_phases = tuple(
+            map(int, self.params.get("coordinatePhases", "").value.split(","))
+        )
+
+        ring_1 = [
+            int(p) for p in self.params.get("ring1", "").value.split(",") if int(p) > 0
+        ]
+        ring_2 = [
+            int(p) for p in self.params.get("ring2", "").value.split(",") if int(p) > 0
+        ]
+
+        barrier_mapping = {}
+        b1, b2 = 0, 0
+        for p1, p2 in zip(ring_1, ring_2):
+            barrier_mapping[int(p1)] = b1
+            barrier_mapping[int(p2)] = b2
+            if p1 in {barrier_phases[0], barrier2_phases[0]}:
+                b1 += 1
+            if p2 in {barrier_phases[1], barrier2_phases[1]}:
+                b2 += 1
+
+        valid_phases = set()
+        for p1 in ring_1:
+            for p2 in ring_2:
+                if barrier_mapping[p1] == barrier_mapping[p2]:
+                    valid_phases.add((p1, p2))
+        valid_phases = list(valid_phases)
+
+        return sorted(
+            valid_phases,
+            key=lambda x: 2
+            * (
+                x
+                in [
+                    coordinated_phases,
+                ]
+            )
+            or 1 * (x in [barrier2_phases, barrier_phases]),
+            reverse=True,
+        )
 
     def update_coordinate_splits(
         self,
@@ -610,6 +672,8 @@ if __name__ == "__main__":
             6: 0.85,
         }
     )
+
+    tl.get_valid_phase_combos()
 
     # tl.update_coordinate_splits(
     #     {
