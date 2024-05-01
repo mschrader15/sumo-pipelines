@@ -52,8 +52,6 @@ void traci_vehicle_state_runner(const std::vector<std::string>& simulation_start
 }
 
 
-
-
 // void traci_vehicle_state_runner(const std::vector<std::string>& simulation_start, int warmup_time, std::string& file_name, bool include_leader, bool include_collision,) {
 
 //     Simulation::start(simulation_start);

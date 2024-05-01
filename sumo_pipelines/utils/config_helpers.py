@@ -289,7 +289,7 @@ def open_config_structured(
     random.seed(c.Metadata.random_seed)
 
     # resolve what I can
-    walk_config(c, resolve_yaml_imports)
+    # walk_config(c, resolve_yaml_imports)
 
     # register the other resolvers
     create_custom_resolvers()
