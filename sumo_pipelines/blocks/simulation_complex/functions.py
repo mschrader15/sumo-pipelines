@@ -10,14 +10,13 @@ except ImportError:
     LIBSUMO = False
 
 
-import numpy as np
+import polars as pl
 import traci.constants as tc
 
 from sumo_pipelines.blocks.simulation.functions import make_cmd
 from sumo_pipelines.blocks.simulation_complex.config import (
     PriorityTrafficLightsRunnerConfig,
 )
-from sumo_pipelines.utils.geo_helpers import get_polygon, is_inside_sm_parallel
 from sumo_pipelines.utils.nema_utils import NEMALight
 
 # def run_sumo_delay(config, *args, **kwargs) -> None:
@@ -27,6 +26,8 @@ from sumo_pipelines.utils.nema_utils import NEMALight
 
 class PhaseHolder:
     TRUCK_WAITING_TIME_FACTOR = 3
+    TRUCK_SPEED_FACTOR = 6
+    TRUCK_COUNT_FACTOR = 6
 
     def __init__(self, tl, phase, sim_step, e2_detector_ids):
         self.tl = tl
@@ -100,13 +101,13 @@ class PhaseHolder:
         self.veh_speed_factor = 0
         self.accumulated_wtime = 0
         for _id, truck in self._ids:
-            self.veh_count += 6 * truck + 1
+            self.veh_count += self.TRUCK_COUNT_FACTOR * truck + 1
             self.veh_speed_factor += max(
-                veh_subs[_id][tc.VAR_SPEED] * (6 * truck + 1), 0
+                veh_subs[_id][tc.VAR_SPEED] * (self.TRUCK_SPEED_FACTOR * truck + 1), 0
             )
             self.accumulated_wtime += (
                 sim_time - self.accumulated_wtime_holder[(_id, truck)]
-            ) * (2 * truck + 1)
+            ) * ((self.TRUCK_WAITING_TIME_FACTOR - 1) * truck + 1)
 
 
 _vehicle_subscriptions = (
@@ -114,13 +115,16 @@ _vehicle_subscriptions = (
     tc.VAR_SPEED,
     tc.VAR_POSITION,
     tc.VAR_FUELCONSUMPTION,
+    tc.VAR_ACCELERATION,
+    tc.VAR_LANE_ID,
+    tc.VAR_EMISSIONCLASS,
+    tc.VAR_TIMELOSS,
 )
 
 
 def traci_priority_light_control(
     config: PriorityTrafficLightsRunnerConfig, *args, **kwargs
 ) -> None:
-    # config.gui = True
     sumo_cmd = make_cmd(config=config)
 
     mainline_weights = (
@@ -133,6 +137,13 @@ def traci_priority_light_control(
         config.intersection_weights.side_b,
         config.intersection_weights.side_c,
     )
+
+    # I don't like this but easiest way for the moment
+    PhaseHolder.TRUCK_WAITING_TIME_FACTOR = (
+        config.intersection_weights.truck_waiting_time_factor
+    )
+    PhaseHolder.TRUCK_SPEED_FACTOR = config.intersection_weights.truck_speed_factor
+    PhaseHolder.TRUCK_COUNT_FACTOR = config.intersection_weights.truck_count_factor
 
     if config.simulation_output:
         f = open(config.simulation_output, "w")
@@ -167,6 +178,7 @@ def traci_priority_light_control(
 
     sim_time = int(libsumo.simulation.getTime() * 1000)
     end_time = int(config.end_time * 1000)
+    action_step = config.action_step * step_size
 
     for veh_id in libsumo.vehicle.getIDList():
         libsumo.vehicle.subscribe(veh_id, _vehicle_subscriptions)
@@ -182,42 +194,53 @@ def traci_priority_light_control(
 
         for veh, veh_info in veh_subs.items():
             fuel_vec.append(
-                [*veh_info[tc.VAR_POSITION], veh_info[tc.VAR_FUELCONSUMPTION]]
+                [
+                    veh,
+                    sim_time / 1000,
+                    veh_info[tc.VAR_SPEED],
+                    veh_info[tc.VAR_ACCELERATION],
+                    *veh_info[tc.VAR_POSITION],
+                    veh_info[tc.VAR_FUELCONSUMPTION],
+                    veh_info[tc.VAR_LANE_ID],
+                    veh_info[tc.VAR_EMISSIONCLASS],
+                    veh_info[tc.VAR_TIMELOSS],
+                ]
             )
             veh_vec.append(veh)
 
-        for _, phase_combos, phase_holders in lights:
-            for phase in phase_holders.values():
-                phase.update(e3_subs, veh_subs, sim_time / 1000)
-                # print(
-                #     f"tl: {_} phase: {phase.phase} speed: {phase.veh_speed_factor} wait: {phase.accumulated_wtime} count: {phase.veh_count}"
-                # )
+        if sim_time % action_step == 0:
+            for _, phase_combos, phase_holders in lights:
+                for phase in phase_holders.values():
+                    phase.update(e3_subs, veh_subs, sim_time / 1000)
+                    # print(
+                    #     f"tl: {_} phase: {phase.phase} speed: {phase.veh_speed_factor} wait: {phase.accumulated_wtime} count: {phase.veh_count}"
+                    # )
 
-            priority = []
-            for combo in phase_combos:
-                if combo == (2, 6):
-                    weights = mainline_weights
-                else:
-                    weights = side_weights
+                priority = []
+                for combo in phase_combos:
+                    if combo == (2, 6):
+                        weights = mainline_weights
+                    else:
+                        weights = side_weights
 
-                priority.append(
-                    sum(
-                        weights[0] * phase_holders[phase].veh_speed_factor
-                        + weights[1] * phase_holders[phase].accumulated_wtime * 60
-                        + weights[2] * phase_holders[phase].veh_count * 60
-                        for phase in combo
+                    priority.append(
+                        sum(
+                            weights[0] * phase_holders[phase].veh_speed_factor
+                            + weights[1] * phase_holders[phase].accumulated_wtime * 60
+                            + weights[2] * phase_holders[phase].veh_count * 60
+                            for phase in combo
+                        )
                     )
-                )
 
-            best_combo = sorted(
-                enumerate(phase_combos), key=lambda x: priority[x[0]], reverse=True
-            )[0][1]
+                best_combo = sorted(
+                    enumerate(phase_combos), key=lambda x: priority[x[0]], reverse=True
+                )[0][1]
 
-            for p_num, phase in phase_holders.items():
-                if p_num in best_combo:
-                    phase.turn_on()
-                else:
-                    phase.turn_off()
+                for p_num, phase in phase_holders.items():
+                    if p_num in best_combo:
+                        phase.turn_on()
+                    else:
+                        phase.turn_off()
 
         for veh_id in libsumo.simulation.getDepartedIDList():
             libsumo.vehicle.subscribe(veh_id, _vehicle_subscriptions)
@@ -226,16 +249,22 @@ def traci_priority_light_control(
 
     libsumo.close()
 
-    fuel_vec = np.array(fuel_vec)
-    veh_vec = np.array(veh_vec)
+    # make a polars dataframe from veh_vec
+    # save the dataframe to a parquet file
+    df = pl.DataFrame(
+        fuel_vec,
+        schema={
+            "veh_id": pl.Utf8,
+            "time": pl.Float64,
+            "speed": pl.Float64,
+            "acceleration": pl.Float64,
+            "x": pl.Float64,
+            "y": pl.Float64,
+            "fuel_consumption": pl.Float64,
+            "lane_id": pl.Utf8,
+            "emission_class": pl.Utf8,
+            "time_loss": pl.Float64,
+        },
+    )
 
-    poly = get_polygon(config.crop_polygon)
-    is_inside = is_inside_sm_parallel(fuel_vec[:, :2], poly)
-    fuel_vec = fuel_vec[is_inside, -1]
-    veh_vec = veh_vec[is_inside]
-    num = np.unique(
-        veh_vec,
-    ).shape[0]
-    # replace negative fuel consumption with 0
-    fuel_vec[fuel_vec < 0] = 0
-    config.average_fuel_consumption = float(fuel_vec.sum() / num)
+    df.write_parquet(config.fcd_output)

@@ -19,6 +19,10 @@ class IntersectionWeights:
     side_b: float = 1.0
     side_c: float = 1.0
 
+    truck_waiting_time_factor: float = 1.0
+    truck_speed_factor: float = 1.0
+    truck_count_factor: float = 1.0
+
 
 ControlledIntersections = List[
     Tuple[str, str, str]
@@ -30,6 +34,7 @@ class PriorityTrafficLightsRunnerConfig(SimulationConfig):
     intersection_weights: IntersectionWeights = field(
         default_factory=IntersectionWeights
     )
-    average_fuel_consumption: float = 0.0
+    fcd_output: Any = ""
     controlled_intersections: list = field(default_factory=list)
     crop_polygon: Any = ""
+    action_step: int = 2
