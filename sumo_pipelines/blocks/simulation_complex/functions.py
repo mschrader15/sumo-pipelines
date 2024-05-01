@@ -254,15 +254,15 @@ def traci_priority_light_control(
     df = pl.DataFrame(
         fuel_vec,
         schema={
-            "veh_id": pl.Utf8,
+            "id": pl.Utf8,
             "time": pl.Float64,
             "speed": pl.Float64,
-            "acceleration": pl.Float64,
+            "accel": pl.Float64,
             "x": pl.Float64,
             "y": pl.Float64,
-            "fuel_consumption": pl.Float64,
-            "lane_id": pl.Utf8,
-            "emission_class": pl.Utf8,
+            "fuel": pl.Float64,
+            "lane": pl.Utf8,
+            "eclass": pl.Utf8,
             "time_loss": pl.Float64,
         },
     )
