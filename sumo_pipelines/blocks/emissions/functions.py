@@ -329,3 +329,4 @@ def emissions_table_to_total(
     )  # g/veh -> L/veh
     config.average_speed = float(df["mean_speed"][0])
     config.average_travel_time = float(df["mean_travel_time"][0])
+    config.mean_speed = float(df["mean_speed"][0])

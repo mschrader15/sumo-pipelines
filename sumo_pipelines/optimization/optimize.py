@@ -51,7 +51,7 @@ def initalize_ray(smoke_test: bool):
 
 def run_optimization_core(config_obj: OptimizationConfig, smoke_test: bool):
     # check that GUI is off if we aren't in smoke test mode
-    if not smoke_test and config_obj.Blocks.SimulationConfig.gui:
+    if not smoke_test and config_obj.Blocks.get("SimulationConfig", False):
         print("Turning off GUI for calibration.")
         config_obj.Blocks.SimulationConfig.gui = False
 

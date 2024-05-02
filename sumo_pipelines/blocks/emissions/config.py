@@ -34,6 +34,7 @@ class EmissionsTableFuelTotalConfig:
     filter_polygon: Any = field(default=None)
     average_speed: Any = field(default=None)
     average_travel_time: Any = field(default=None)
+    mean_speed: Any = field(default=None)
 
 
 @dataclass
