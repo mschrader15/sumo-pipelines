@@ -14,6 +14,7 @@ class IntersectionWeights:
     mainline_a: float = 1.0
     mainline_b: float = 1.0
     mainline_c: float = 1.0
+    mainline_d: float = 1.0
 
     side_a: float = 1.0
     side_b: float = 1.0

@@ -132,6 +132,19 @@ _vehicle_subscriptions = (
     tc.VAR_TIMELOSS,
 )
 
+UPSTREAM_MAP = {
+    2: {
+        "63082004": None,
+        "63082003": "63082004",
+        "63082002": "63082003",
+    },
+    6: {
+        "63082004": "63082003",
+        "63082003": "63082002",
+        "63082002": None,
+    },
+}
+
 
 def traci_priority_light_control(
     config: PriorityTrafficLightsRunnerConfig, *args, **kwargs
@@ -142,6 +155,7 @@ def traci_priority_light_control(
         config.intersection_weights.mainline_a,
         config.intersection_weights.mainline_b,
         config.intersection_weights.mainline_c,
+        config.intersection_weights.mainline_d,
     )
     side_weights = (
         config.intersection_weights.side_a,
@@ -166,32 +180,33 @@ def traci_priority_light_control(
 
     e2_detectors = libsumo.lanearea.getIDList()
 
-    lights = []
+    lights = {}
     for junction, programID, file in config.controlled_intersections:
         nema_light = NEMALight.from_xml(xml=file, id=junction, programID=programID)
-        lights.append(
-            (
-                junction,
-                [
-                    combo if combo[0] != combo[1] else (combo[0],)
-                    for combo in nema_light.get_valid_phase_combos()
-                ],
-                {
-                    p.name: PhaseHolder(
-                        junction,
-                        p.name,
-                        step_size / 1000,
-                        e2_detectors,
-                        truck_waiting_time_factor=config.intersection_weights.truck_waiting_time_factor,
-                        truck_speed_factor=config.intersection_weights.truck_speed_factor,
-                        # truck_count_factor=config.intersection_weights.truck_count_factor,
-                    )
-                    for p in nema_light.get_phase_list()
-                },
-            )
+        lights[junction] = (
+            [
+                combo if combo[0] != combo[1] else (combo[0],)
+                for combo in nema_light.get_valid_phase_combos()
+            ],
+            {
+                p.name: PhaseHolder(
+                    junction,
+                    p.name,
+                    step_size / 1000,
+                    e2_detectors,
+                    truck_waiting_time_factor=config.intersection_weights.truck_waiting_time_factor,
+                    truck_speed_factor=config.intersection_weights.truck_speed_factor,
+                    # truck_count_factor=config.intersection_weights.truck_count_factor,
+                )
+                for p in nema_light.get_phase_list()
+            },
         )
 
         libsumo.trafficlight.setProgram(junction, programID)
+        libsumo.trafficlight.subscribe(
+            junction, [tc.TL_RED_YELLOW_GREEN_STATE, tc.VAR_NAME]
+        )
+        libsumo.trafficlight.getPhaseName("63082002")
 
     sim_time = int(libsumo.simulation.getTime() * 1000)
     end_time = int(config.end_time * 1000)
@@ -203,11 +218,18 @@ def traci_priority_light_control(
     fuel_vec = []
     veh_vec = []
 
+    def upstream_factor(tl, phase, signal_subs):
+        if (upstream_tl := UPSTREAM_MAP.get(phase.phase, {}).get(tl, None)) is not None:
+            if str(phase.phase) in signal_subs[upstream_tl][tc.VAR_NAME]:
+                return lights[upstream_tl][1][phase.phase].veh_speed_factor
+        return 0
+
     while sim_time < end_time:
         libsumo.simulation.step()
 
         e3_subs = libsumo.multientryexit.getAllSubscriptionResults()
         veh_subs = libsumo.vehicle.getAllSubscriptionResults()
+        signal_subs = libsumo.trafficlight.getAllSubscriptionResults()
 
         for veh, veh_info in veh_subs.items():
             fuel_vec.append(
@@ -226,25 +248,28 @@ def traci_priority_light_control(
             veh_vec.append(veh)
 
         if sim_time % action_step == 0:
-            for _, phase_combos, phase_holders in lights:
+            for _, phase_holders in lights.values():
                 for phase in phase_holders.values():
                     phase.update(e3_subs, veh_subs, sim_time / 1000)
                     # print(
                     #     f"tl: {_} phase: {phase.phase} speed: {phase.veh_speed_factor} wait: {phase.accumulated_wtime} count: {phase.veh_count}"
                     # )
 
+            for tl, (phase_combos, phase_holders) in lights.items():
                 priority = []
                 for combo in phase_combos:
                     if combo == (2, 6):
                         weights = mainline_weights
                     else:
-                        weights = side_weights
+                        weights = [*side_weights, 0]
 
                     priority.append(
                         sum(
                             weights[0] * phase_holders[phase].veh_speed_factor
                             + weights[1] * phase_holders[phase].accumulated_wtime * 60
                             + weights[2] * 60
+                            + weights[3]
+                            * upstream_factor(tl, phase_holders[phase], signal_subs)
                             for phase in combo
                         )
                     )
