@@ -25,11 +25,16 @@ from sumo_pipelines.utils.nema_utils import NEMALight
 
 
 class PhaseHolder:
-    TRUCK_WAITING_TIME_FACTOR = 3
-    TRUCK_SPEED_FACTOR = 6
-    TRUCK_COUNT_FACTOR = 6
-
-    def __init__(self, tl, phase, sim_step, e2_detector_ids):
+    def __init__(
+        self,
+        tl,
+        phase,
+        sim_step,
+        e2_detector_ids,
+        truck_waiting_time_factor=3,
+        truck_speed_factor=6,
+        truck_count_factor=6,
+    ):
         self.tl = tl
         self.phase = phase
 
@@ -42,6 +47,10 @@ class PhaseHolder:
         self.veh_speed_factor = 0
         self.veh_count = 0
         self.sim_step = sim_step
+
+        self.truck_waiting_time_factor = truck_waiting_time_factor
+        self.truck_speed_factor = truck_speed_factor
+        self.truck_count_factor = truck_count_factor
 
         self.subscribe()
         self.get_e2s(e2_detector_ids)
@@ -101,13 +110,15 @@ class PhaseHolder:
         self.veh_speed_factor = 0
         self.accumulated_wtime = 0
         for _id, truck in self._ids:
-            self.veh_count += self.TRUCK_COUNT_FACTOR * truck + 1
+            self.veh_count += self.truck_count_factor * truck + 1
             self.veh_speed_factor += max(
-                veh_subs[_id][tc.VAR_SPEED] * (self.TRUCK_SPEED_FACTOR * truck + 1), 0
+                veh_subs[_id][tc.VAR_SPEED] * (self.truck_speed_factor * truck + 1), 0
             )
-            self.accumulated_wtime += (
-                sim_time - self.accumulated_wtime_holder[(_id, truck)]
-            ) * ((self.TRUCK_WAITING_TIME_FACTOR - 1) * truck + 1)
+            self.accumulated_wtime += max(
+                (sim_time - self.accumulated_wtime_holder[(_id, truck)])
+                * (self.truck_waiting_time_factor * truck + 1),
+                0,
+            )
 
 
 _vehicle_subscriptions = (
@@ -139,11 +150,11 @@ def traci_priority_light_control(
     )
 
     # I don't like this but easiest way for the moment
-    PhaseHolder.TRUCK_WAITING_TIME_FACTOR = (
-        config.intersection_weights.truck_waiting_time_factor
-    )
-    PhaseHolder.TRUCK_SPEED_FACTOR = config.intersection_weights.truck_speed_factor
-    PhaseHolder.TRUCK_COUNT_FACTOR = config.intersection_weights.truck_count_factor
+    # PhaseHolder.TRUCK_WAITING_TIME_FACTOR = (
+    #     config.intersection_weights.truck_waiting_time_factor
+    # )
+    # PhaseHolder.TRUCK_SPEED_FACTOR = config.intersection_weights.truck_speed_factor
+    # PhaseHolder.TRUCK_COUNT_FACTOR = config.intersection_weights.truck_count_factor
 
     if config.simulation_output:
         f = open(config.simulation_output, "w")
@@ -167,7 +178,13 @@ def traci_priority_light_control(
                 ],
                 {
                     p.name: PhaseHolder(
-                        junction, p.name, step_size / 1000, e2_detectors
+                        junction,
+                        p.name,
+                        step_size / 1000,
+                        e2_detectors,
+                        truck_waiting_time_factor=config.intersection_weights.truck_waiting_time_factor,
+                        truck_speed_factor=config.intersection_weights.truck_speed_factor,
+                        # truck_count_factor=config.intersection_weights.truck_count_factor,
                     )
                     for p in nema_light.get_phase_list()
                 },
@@ -227,7 +244,7 @@ def traci_priority_light_control(
                         sum(
                             weights[0] * phase_holders[phase].veh_speed_factor
                             + weights[1] * phase_holders[phase].accumulated_wtime * 60
-                            + weights[2] * phase_holders[phase].veh_count * 60
+                            + weights[2] * 60
                             for phase in combo
                         )
                     )

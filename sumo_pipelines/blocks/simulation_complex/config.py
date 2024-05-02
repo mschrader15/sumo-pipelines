@@ -21,7 +21,7 @@ class IntersectionWeights:
 
     truck_waiting_time_factor: float = 1.0
     truck_speed_factor: float = 1.0
-    truck_count_factor: float = 1.0
+    # truck_count_factor: float = 1.0
 
 
 ControlledIntersections = List[
