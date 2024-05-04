@@ -10,6 +10,8 @@ except ImportError:
     LIBSUMO = False
 
 
+import itertools
+
 import polars as pl
 import traci.constants as tc
 
@@ -163,11 +165,13 @@ def traci_priority_light_control(
         config.intersection_weights.mainline_b,
         config.intersection_weights.mainline_c,
         config.intersection_weights.mainline_d,
+        config.intersection_weights.mainline_e,
     )
     side_weights = (
         config.intersection_weights.side_a,
         config.intersection_weights.side_b,
         config.intersection_weights.side_c,
+        config.intersection_weights.side_d,
     )
 
     # I don't like this but easiest way for the moment
@@ -227,9 +231,12 @@ def traci_priority_light_control(
 
     def upstream_factor(tl, phase, signal_subs):
         if (upstream_tl := UPSTREAM_MAP.get(phase.phase, {}).get(tl, None)) is not None:
-            if str(phase.phase) in signal_subs[upstream_tl][tc.VAR_NAME]:
+            if phase.phase in signal_subs[upstream_tl]:
                 return lights[upstream_tl][1][phase.phase].veh_speed_factor
         return 0
+
+    all_phases = list(itertools.product(*(p[0] for p in lights.values())))
+    tl_index = list(lights.keys())  # python dict keys hold order
 
     while sim_time < end_time:
         libsumo.simulation.step()
@@ -254,42 +261,54 @@ def traci_priority_light_control(
             )
             veh_vec.append(veh)
 
+        for _, phase_holders in lights.values():
+            for phase in phase_holders.values():
+                phase.update(e3_subs, veh_subs, sim_time / 1000)
+
+                # if not phase.on and phase.phase in (2, 6):
+
+                # print(
+                #     f"tl: {_} phase: {phase.phase} speed: {phase.veh_speed_factor} wait: {phase.accumulated_wtime} count: {phase.veh_count}"
+                # )
+
         if sim_time % action_step == 0:
-            for _, phase_holders in lights.values():
-                for phase in phase_holders.values():
-                    phase.update(e3_subs, veh_subs, sim_time / 1000)
-
-                    # if not phase.on and phase.phase in (2, 6):
-
-                    # print(
-                    #     f"tl: {_} phase: {phase.phase} speed: {phase.veh_speed_factor} wait: {phase.accumulated_wtime} count: {phase.veh_count}"
-                    # )
+            combo_scores = []
 
             for tl, (phase_combos, phase_holders) in lights.items():
-                priority = []
+                # priority = []
+                combo_scores.append({})
                 for combo in phase_combos:
                     if combo == (2, 6):
                         weights = mainline_weights
                     else:
-                        weights = [*side_weights, 0]
+                        weights = side_weights
 
-                    priority.append(
-                        sum(
-                            weights[0] * phase_holders[phase].veh_speed_factor
-                            + weights[1] * phase_holders[phase].accumulated_wtime * 60
-                            + weights[2] * 60
-                            + weights[3]
-                            * upstream_factor(tl, phase_holders[phase], signal_subs)
-                            for phase in combo
-                        )
+                    combo_scores[-1][combo] = sum(
+                        weights[0] * phase_holders[phase].veh_speed_factor
+                        + weights[1] * phase_holders[phase].accumulated_wtime
+                        + weights[2]
+                        - weights[3] * (str(phase) not in signal_subs[tl][tc.VAR_NAME])
+                        for phase in combo
                     )
 
-                best_combo = sorted(
-                    enumerate(phase_combos), key=lambda x: priority[x[0]], reverse=True
-                )[0][1]
+            adjusted_scores = []
+            for combo in all_phases:
+                score = 0
+                states = dict(zip(tl_index, combo))
+                for tl_i, light_state in enumerate(combo):
+                    score += combo_scores[tl_i][light_state]
+                    # if light_state == (2, 6):
+                    for phase in light_state:
+                        score += mainline_weights[4] * upstream_factor(
+                            tl_index[tl_i], lights[tl_index[tl_i]][1][phase], states
+                        )
+                adjusted_scores.append((combo, score))
 
+            best_combo = max(adjusted_scores, key=lambda x: x[1])[0]
+
+            for i, (_, phase_holders) in enumerate(lights.values()):
                 for p_num, phase in phase_holders.items():
-                    if p_num in best_combo:
+                    if p_num in best_combo[i]:
                         phase.turn_on()
                     else:
                         phase.turn_off()

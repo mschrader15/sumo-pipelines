@@ -14,15 +14,16 @@ class IntersectionWeights:
     mainline_a: float = 1.0
     mainline_b: float = 1.0
     mainline_c: float = 1.0
-    mainline_d: float = 1.0
+    mainline_d: float = 0
+    mainline_e: float = 0
 
     side_a: float = 1.0
     side_b: float = 1.0
     side_c: float = 1.0
+    side_d: float = 0
 
     truck_waiting_time_factor: float = 1.0
     truck_speed_factor: float = 1.0
-    # truck_count_factor: float = 1.0
 
 
 ControlledIntersections = List[
