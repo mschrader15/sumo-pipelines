@@ -96,7 +96,9 @@ def target_wrapper(
                                 dict(
                                     zip(
                                         local_global_config.Optimization.ObjectiveFn.config.keys(),
-                                        [1e6]
+                                        [
+                                            None,
+                                        ]
                                         * len(
                                             local_global_config.Optimization.ObjectiveFn.config
                                         ),
