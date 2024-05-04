@@ -202,6 +202,7 @@ def _sample_dist(param: ParamConfig, n: int, seed: int = 42) -> np.array:
     # first fast pass
     vals = dist.rvs(n, random_state=seed)
     if param.bounds:
+        param.bounds = [float(b) for b in param.bounds]
 
         def get_ob() -> np.array:
             return (vals < param.bounds[0]) | (vals > param.bounds[1])

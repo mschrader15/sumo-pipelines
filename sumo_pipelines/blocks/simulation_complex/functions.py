@@ -57,6 +57,10 @@ class PhaseHolder:
         self._on = True
         self.turn_off()
 
+    @property
+    def on(self):
+        return self._on
+
     def get_e2s(self, all_e2_detector_ids):
         self._e2s = list(
             filter(lambda x: f"{self.tl}_{self.phase}" in x, all_e2_detector_ids)
@@ -115,7 +119,10 @@ class PhaseHolder:
                 veh_subs[_id][tc.VAR_SPEED] * (self.truck_speed_factor * truck + 1), 0
             )
             self.accumulated_wtime += max(
-                (sim_time - self.accumulated_wtime_holder[(_id, truck)])
+                (
+                    (sim_time - self.accumulated_wtime_holder[(_id, truck)])
+                    * (veh_subs[_id][tc.VAR_SPEED] < 3)
+                )
                 * (self.truck_waiting_time_factor * truck + 1),
                 0,
             )
@@ -251,6 +258,9 @@ def traci_priority_light_control(
             for _, phase_holders in lights.values():
                 for phase in phase_holders.values():
                     phase.update(e3_subs, veh_subs, sim_time / 1000)
+
+                    # if not phase.on and phase.phase in (2, 6):
+
                     # print(
                     #     f"tl: {_} phase: {phase.phase} speed: {phase.veh_speed_factor} wait: {phase.accumulated_wtime} count: {phase.veh_count}"
                     # )

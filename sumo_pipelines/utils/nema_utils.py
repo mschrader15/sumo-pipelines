@@ -315,7 +315,10 @@ class NEMALight:
             add_time = {
                 _p: rounded_time
                 for _p, rounded_time in zip(
-                    add_time.keys(), iteround.saferound(add_time.values(), places=1)
+                    add_time.keys(),
+                    iteround.saferound(
+                        add_time.values(), places=1, strategy=iteround.LARGEST
+                    ),
                 )
             }
 
@@ -413,7 +416,10 @@ class NEMALight:
         add_time = {
             _p: rounded_time
             for _p, rounded_time in zip(
-                add_time.keys(), iteround.saferound(add_time.values(), places=1)
+                add_time.keys(),
+                iteround.saferound(
+                    add_time.values(), places=1, strategy=iteround.LARGEST
+                ),
             )
         }
 
@@ -659,28 +665,28 @@ if __name__ == "__main__":
     # test the NEMALight class
 
     tl = NEMALight.from_xml(
-        "/Users/max/Development/DOE-Project/airport-harper-calibration/simulation/additional/signals/63082002.NEMA.Coordinated.xml",
-        id="63082002",
-        programID="63082002_12",
+        "/Users/max/Development/DOE-Project/airport-harper-calibration/simulation/additional/signals/63082004.NEMA.Coordinated.xml",
+        id="63082004",
+        programID="63082004_20",
     )
 
     tl.update_offset(22)
 
     tl.update_coordinate_splits(
         {
-            2: 0.76666666,
-            6: 0.63333333,
+            2: 0.5,
+            6: 0.5,
         }
     )
 
     tl.get_valid_phase_combos()
 
-    # tl.update_coordinate_splits(
-    #     {
-    #         4: 0.2,
-    #         8: 0.1,
-    #     }
-    # )
+    tl.update_coordinate_splits(
+        {
+            4: 0.5,
+            8: 0.5,
+        }
+    )
 
     # tl.update_coordinate_splits(
     #     {

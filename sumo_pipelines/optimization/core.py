@@ -46,6 +46,8 @@ def target_wrapper(
             local_global_config.Optimization.SearchSpace, config
         )
 
+        fail_safe = local_global_config.Optimization.ObjectiveFn.fail_safe
+
         empty_config = {}
 
         def _update_mean(new_val_dict) -> dict:
@@ -63,26 +65,48 @@ def target_wrapper(
         for _ in range(local_global_config.Optimization.ObjectiveFn.n_iterations):
             # execute the pre-processing pipeline
             block = get_pipeline_by_name(local_global_config, "Pre-Processing")
-            if block is not None:
-                execute_pipe_block(block, local_global_config, random_state=rnd_state)
-
-            # execute the target function. Don't actually have to have an objective fn...
-            if local_global_config.Optimization.ObjectiveFn.function is not None:
-                res = local_global_config.Optimization.ObjectiveFn.function(
-                    *args,
-                    config=local_global_config,
-                    function_config=local_global_config.Optimization.ObjectiveFn.config,
-                    **kwargs,
-                )
-            if local_global_config.Optimization.ObjectiveFn.report_config:
-                res = _update_mean(
-                    OmegaConf.to_container(
-                        local_global_config.Optimization.ObjectiveFn.config,
-                        resolve=True,
+            try:
+                if block is not None:
+                    execute_pipe_block(
+                        block, local_global_config, random_state=rnd_state
                     )
-                )
-            else:
-                res = _update_mean(res)
+
+                # execute the target function. Don't actually have to have an objective fn...
+                if local_global_config.Optimization.ObjectiveFn.function is not None:
+                    res = local_global_config.Optimization.ObjectiveFn.function(
+                        *args,
+                        config=local_global_config,
+                        function_config=local_global_config.Optimization.ObjectiveFn.config,
+                        **kwargs,
+                    )
+                if local_global_config.Optimization.ObjectiveFn.report_config:
+                    res = _update_mean(
+                        OmegaConf.to_container(
+                            local_global_config.Optimization.ObjectiveFn.config,
+                            resolve=True,
+                        )
+                    )
+                else:
+                    res = _update_mean(res)
+            except Exception as e:
+                if fail_safe:
+                    if local_global_config.Optimization.ObjectiveFn.report_config:
+                        train.report(
+                            _update_mean(
+                                dict(
+                                    zip(
+                                        local_global_config.Optimization.ObjectiveFn.config.keys(),
+                                        [1e6]
+                                        * len(
+                                            local_global_config.Optimization.ObjectiveFn.config
+                                        ),
+                                    )
+                                )
+                            )
+                        )
+                        return
+                else:
+                    raise e
 
             if local_global_config.Optimization.ObjectiveFn.return_intermediate:
                 train.report(res)
