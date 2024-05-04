@@ -4,7 +4,7 @@ from collections import OrderedDict
 from copy import deepcopy
 from dataclasses import dataclass, fields
 from os import PathLike
-from typing import Dict, List, Union
+from typing import Dict, List, Tuple, Union
 
 import polars as pl
 import sumolib
@@ -226,7 +226,7 @@ class NEMALight:
 
     def update_coordinate_splits(
         self,
-        splits: dict[int, float],
+        splits: List[Tuple[int, float]],
     ) -> None:
         # get the coordinate phases
         coord_phases = self.params.get("coordinatePhases", "").value.split(",")
@@ -274,7 +274,7 @@ class NEMALight:
 
         # update the main side of the barrier
         b_num = None
-        for p, _ in splits.items():
+        for p, _ in splits:
             if b_num is not None:
                 assert barrier_mapping[p] == b_num
             else:
@@ -282,7 +282,8 @@ class NEMALight:
 
         new_phases = deepcopy(phase_holder)
         barrier_adjustments = []
-        for ring_num, (p, split) in enumerate(splits.items()):
+
+        for ring_num, (p, split) in enumerate(splits):
             new_phases[ring_num][p].maxDur = (
                 cycle_length * split - phase_holder[ring_num][p].yellow_red_duration
             ) // 1
@@ -336,9 +337,7 @@ class NEMALight:
 
         max_barrier = max(barrier_adjustments)
 
-        for ring_num, ((_, _), b_length) in enumerate(
-            zip(splits.items(), barrier_adjustments)
-        ):
+        for ring_num, ((_, _), b_length) in enumerate(zip(splits, barrier_adjustments)):
             if b_length < max_barrier:
                 update_phases = [
                     _p
@@ -665,28 +664,29 @@ if __name__ == "__main__":
     # test the NEMALight class
 
     tl = NEMALight.from_xml(
-        "/Users/max/Development/DOE-Project/airport-harper-calibration/simulation/additional/signals/63082004.NEMA.Coordinated.xml",
-        id="63082004",
-        programID="63082004_20",
+        "/Users/max/Development/DOE-Project/airport-harper-calibration/simulation/additional/signals/63082002.NEMA.Coordinated.xml",
+        id="63082002",
+        programID="63082002_12",
     )
 
     tl.update_offset(22)
 
     tl.update_coordinate_splits(
-        {
-            2: 0.65,
-            6: 0.65,
-        }
+        [
+            (
+                2,
+                0.65,
+            ),
+            (
+                6,
+                0.65,
+            ),
+        ]
     )
 
     tl.get_valid_phase_combos()
 
-    tl.update_coordinate_splits(
-        {
-            4: 0.1,
-            8: 0.1,
-        }
-    )
+    tl.update_coordinate_splits([(4, 0.1), (4, 0.1)])
 
     # tl.update_coordinate_splits(
     #     {

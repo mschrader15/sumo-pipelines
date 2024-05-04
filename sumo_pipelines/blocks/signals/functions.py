@@ -29,12 +29,13 @@ def update_nema(
         )
 
         if nema_conf.splits:
-            for sp1, sp2 in zip(nema_conf.splits, nema_conf.splits[1:]):
+            assert len(nema_conf.splits) % 2 == 0, "The number of splits must be even."
+            for sp1, sp2 in zip(nema_conf.splits[::2], nema_conf.splits[1::2]):
                 nema.update_coordinate_splits(
-                    {
-                        sp1.phase: sp1.split,
-                        sp2.phase: sp2.split,
-                    }
+                    [
+                        (sp1.phase, sp1.split),
+                        (sp2.phase, sp2.split),
+                    ]
                 )
 
         if nema_conf.offset:
