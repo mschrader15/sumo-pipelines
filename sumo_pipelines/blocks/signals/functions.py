@@ -29,14 +29,13 @@ def update_nema(
         )
 
         if nema_conf.splits:
-            nema.update_coordinate_splits(
-                dict(
-                    zip(
-                        [split.phase for split in nema_conf.splits],
-                        [split.split for split in nema_conf.splits],
-                    )
+            for sp1, sp2 in zip(nema_conf.splits, nema_conf.splits[1:]):
+                nema.update_coordinate_splits(
+                    {
+                        sp1.phase: sp1.split,
+                        sp2.phase: sp2.split,
+                    }
                 )
-            )
 
         if nema_conf.offset:
             nema.update_offset(nema_conf.offset)

@@ -674,8 +674,8 @@ if __name__ == "__main__":
 
     tl.update_coordinate_splits(
         {
-            2: 0.5,
-            6: 0.5,
+            2: 0.65,
+            6: 0.65,
         }
     )
 
@@ -683,8 +683,8 @@ if __name__ == "__main__":
 
     tl.update_coordinate_splits(
         {
-            4: 0.5,
-            8: 0.5,
+            4: 0.1,
+            8: 0.1,
         }
     )
 
