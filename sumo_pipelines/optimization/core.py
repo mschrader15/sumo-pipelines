@@ -92,19 +92,19 @@ def target_wrapper(
                 if fail_safe:
                     if local_global_config.Optimization.ObjectiveFn.report_config:
                         train.report(
-                            _update_mean(
-                                dict(
-                                    zip(
-                                        local_global_config.Optimization.ObjectiveFn.config.keys(),
-                                        [
-                                            None,
-                                        ]
-                                        * len(
-                                            local_global_config.Optimization.ObjectiveFn.config
-                                        ),
-                                    )
+                            # _update_mean(
+                            dict(
+                                zip(
+                                    local_global_config.Optimization.ObjectiveFn.config.keys(),
+                                    [
+                                        None,
+                                    ]
+                                    * len(
+                                        local_global_config.Optimization.ObjectiveFn.config
+                                    ),
                                 )
                             )
+                            # )
                         )
                         return
                 else:
