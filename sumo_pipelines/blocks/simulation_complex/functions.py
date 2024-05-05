@@ -120,12 +120,13 @@ class PhaseHolder:
             self.veh_speed_factor += max(
                 veh_subs[_id][tc.VAR_SPEED] * (self.truck_speed_factor * truck + 1), 0
             )
+
+            wt = sim_time - self.accumulated_wtime_holder[(_id, truck)]
+            if wt > 150:
+                wt = 1e6
+
             self.accumulated_wtime += max(
-                (
-                    (sim_time - self.accumulated_wtime_holder[(_id, truck)])
-                    * (veh_subs[_id][tc.VAR_SPEED] < 3)
-                )
-                * (self.truck_waiting_time_factor * truck + 1),
+                (wt) * (self.truck_waiting_time_factor * truck + 1),
                 0,
             )
 
@@ -285,8 +286,8 @@ def traci_priority_light_control(
 
                     combo_scores[-1][combo] = sum(
                         weights[0] * phase_holders[phase].veh_speed_factor
-                        + weights[1] * phase_holders[phase].accumulated_wtime
-                        + weights[2]
+                        + weights[2] * phase_holders[phase].accumulated_wtime * 60
+                        + weights[1] * 60
                         - weights[3] * (str(phase) not in signal_subs[tl][tc.VAR_NAME])
                         for phase in combo
                     )
