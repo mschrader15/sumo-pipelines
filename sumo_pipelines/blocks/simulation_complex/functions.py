@@ -122,8 +122,8 @@ class PhaseHolder:
             )
 
             wt = sim_time - self.accumulated_wtime_holder[(_id, truck)]
-            if wt > 150:
-                wt = 1e6
+            # if wt > 150:
+            #     wt = 1e6
 
             self.accumulated_wtime += max(
                 (wt) * (self.truck_waiting_time_factor * truck + 1),
