@@ -3,6 +3,7 @@ from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, List, Union
+import re
 
 from omegaconf import DictConfig, ListConfig, OmegaConf
 from simpleeval import simple_eval
@@ -228,7 +229,15 @@ def open_config_structured(
                 )
                 all_confs.append(c)
             except Exception:
-                update_dotpaths.append(str(p).split("="))
+                try:
+                    # check if a [<int>] is in the path using regex
+                    if re.findall(r"\[\d+\]", p):
+                        update_dotpaths.append(('dot', tuple(p.split("="))))
+
+                    else:
+                        update_dotpaths.append(('conf', OmegaConf.from_cli([p])))
+                except Exception:
+                    raise Exception(f"Failed to load: {p}")
 
         # all_confs = [OmegaConf.load(p) for p in path]
         # special merge behavior for Blocks.SimulationConfig.addiational_files & Blocks.SimulationConfig.additional_sim_params
@@ -278,8 +287,12 @@ def open_config_structured(
             c.Blocks.SimulationConfig.additional_sim_params = additional_sim_params
 
         # for dot paths that failed to load
-        for key, value in update_dotpaths:
-            OmegaConf.update(c, key, value, force_add=True, merge=True)
+        for type_, conf in update_dotpaths:
+            # OmegaConf.update(c, key, value, force_add=True, merge=True)
+            if type_ == "dot":
+                OmegaConf.update(c, conf[0], conf[1], force_add=True, merge=True)
+            else:
+                c = OmegaConf.merge(c, conf)
 
     else:
         c = OmegaConf.load(
