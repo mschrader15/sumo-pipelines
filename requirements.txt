@@ -11,3 +11,4 @@ pyarrow
 ray[tune]
 simpleeval
 sumolib
+scipy
