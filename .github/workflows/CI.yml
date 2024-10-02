@@ -22,15 +22,5 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Add requirements
       run: python -m pip install --upgrade wheel setuptools
-    - name: Install Apache Arrow
-      run: |
-        if [ "${{ matrix.platform }}" == "ubuntu-latest" ]; then
-          sudo apt update
-          sudo apt install -y libapache-arrow-dev
-        elif [ "${{ matrix.platform }}" == "macos-latest" ]; then
-          brew install apache-arrow
-        elif [ "${{ matrix.platform }}" == "windows-latest" ]; then
-          choco install apache-arrow
-        fi
     - name: Build and install
       run: pip install --verbose .
