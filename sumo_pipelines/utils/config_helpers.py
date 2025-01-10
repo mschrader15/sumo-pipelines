@@ -231,7 +231,8 @@ def open_config_structured(
             except Exception:
                 try:
                     # check if a [<int>] is in the path using regex
-                    if re.findall(r"\[\d+\]", p):
+                    p = str(p)
+                    if re.findall(r"\[-?\d+\]", p):
                         update_dotpaths.append(('dot', tuple(p.split("="))))
 
                     else:

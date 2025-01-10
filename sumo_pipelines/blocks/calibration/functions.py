@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import polars as pl
 from pytz import timezone
@@ -103,7 +103,7 @@ def _open_detector_df(file_path: str, target_col: str):
             pl.col("detector").str.split("_").list.first().alias("tl"),
             pl.col("detector")
             .str.split("_")
-            .list.take(1)
+            .list.get(1)
             .list.first()
             .cast(int)
             .alias("detector"),
@@ -118,9 +118,12 @@ def usdot_table_join(
     rw_df = pl.scan_parquet(config.calibrate_file)
 
     # check that the desired aggregation interval is the same as what is in the file
-    agg_interval = rw_df.select(
-        (pl.col("Timestamp").unique().sort().diff() / 1e6).take(2)
+    agg_interval: timedelta = rw_df.select(
+        (pl.col("Timestamp").unique().sort().diff()).get(2)
     ).collect()["Timestamp"][0]
+
+    agg_interval = int(agg_interval.seconds)
+
     assert (agg_interval >= config.agg_interval) & (
         (agg_interval % config.agg_interval) == 0
     )
@@ -128,15 +131,15 @@ def usdot_table_join(
     if isinstance(config.start_time, str):
         start_time = datetime.strptime(
             config.start_time,
-            "%Y-%m-%d %H:%M:%S",
+            "%Y-%m-%d %H:%M:%S%z",
         ).replace(tzinfo=timezone("US/Central"))
     else:
         start_time = config.start_time.replace(tzinfo=timezone("US/Central"))
 
     sim_df = sim_df.with_columns(
-        (pl.lit(start_time) + pl.col("sim_time") * 1e6)
-        .cast(pl.Datetime(time_unit="us", time_zone="US/Central"))
-        .alias("rw_time"),
+        (pl.lit(start_time) + pl.duration(seconds=pl.col("sim_time")))
+        # .cast(pl.Datetime(time_unit="us", time_zone="US/Central"))
+        .alias("rw_time")
     ).collect()
 
     for function_obj in config.sim_file_functions:
