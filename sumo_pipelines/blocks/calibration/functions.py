@@ -92,6 +92,7 @@ def calculate_geh(config: PostProcessingGEHConfig, *args, **kwargs):
         combined_df.write_parquet(config.output_file)
 
 
+
 def _open_detector_df(file_path: str, target_col: str):
     return (
         pl.scan_parquet(file_path)
@@ -100,12 +101,12 @@ def _open_detector_df(file_path: str, target_col: str):
             pl.col(["sim_time", target_col]).cast(pl.Float64),
         )
         .with_columns(
-            pl.col("detector").str.split("_").list.first().alias("tl"),
+            pl.col("detector").str.split("_").list.get(0).alias("tl"),
             pl.col("detector")
             .str.split("_")
             .list.get(1)
-            .list.first()
             .cast(int)
+            # .cast(int)
             .alias("detector"),
         )
     )
@@ -147,7 +148,7 @@ def usdot_table_join(
 
     calibrate_df = (
         (
-            sim_df.groupby_dynamic(
+            sim_df.group_by_dynamic(
                 index_column="rw_time",
                 every=f"{int(agg_interval)}s",
                 by=config.join_on_cols,
@@ -181,7 +182,7 @@ def usdot_calibrate(config: USDOTCalibrationConfig, *args, **kwargs) -> None:
 
     target_col = f"{config.target_col}_sim"
 
-    calibrate_df = calibrate_df.groupby([*config.join_on_cols]).agg(
+    calibrate_df = calibrate_df.group_by([*config.join_on_cols]).agg(
         # TAT2
         (
             pl.col(target_col)

@@ -19,7 +19,7 @@ def group_raw_df(
     raw_df, time_column, agg_interval, group_on_cols, agg_function
 ) -> pl.DataFrame:
     return (
-        raw_df.groupby_dynamic(
+        raw_df.group_by_dynamic(
             index_column=time_column,
             every=agg_interval,
             by=group_on_cols,

@@ -41,7 +41,7 @@ def write_turn_file_input(
 
     df = (
         df.sort(turn_file_config.time_column)
-        .groupby_dynamic(
+        .group_by_dynamic(
             index_column=turn_file_config.time_column,
             every=f"{int(turn_file_config.agg_interval)}s",
             period=f"{int(turn_file_config.agg_interval)}s",
@@ -116,7 +116,7 @@ def write_turn_file_input(
     with open(turn_file_config.output_file, "w") as f_:
         f_.write("""<additional>\n""")
 
-        df.groupby("begin", "end", maintain_order=True).apply(
+        df.group_by("begin", "end", maintain_order=True).apply(
             lambda _df: write_lines(_df, f_)
         )
 
