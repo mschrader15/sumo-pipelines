@@ -5,7 +5,7 @@ Allows for a end to end SUMO pipeline definition using standalone processing **[
 
 Supports massive parallelization using Ray, as well as parallel calibration using Ray Tune and Nevergrad.
 
-## Instalation Information
+## Installation Information
 
 ```
 # To use sumo-pipelines w/o SUMO C++ API:
