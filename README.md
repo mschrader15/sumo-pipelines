@@ -5,6 +5,19 @@ Allows for a end to end SUMO pipeline definition using standalone processing **[
 
 Supports massive parallelization using Ray, as well as parallel calibration using Ray Tune and Nevergrad.
 
+## Instalation Information
+
+```
+# To use sumo-pipelines w/o SUMO C++ API:
+pip install git+https://github.com/mschrader15/sumo-pipelines
+
+# To install sumo-pipelines with the bindings to SUMO
+# SUMO must be installed, with compiled binaries (including libsumocpp) in $SUMO_HOME/bin 
+export SUMO_HOME=<path to your sumo install>
+export BUILD_CPP=1
+pip install git+https://github.com/mschrader15/sumo-pipelines
+```
+
 
 ## Used By:
 
