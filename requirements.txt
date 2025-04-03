@@ -9,6 +9,7 @@ pandas
 polars
 pyarrow
 ray[tune]
+scipy
+shapely
 simpleeval
 sumolib
-scipy
