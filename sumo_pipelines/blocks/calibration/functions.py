@@ -7,6 +7,7 @@ from sumo_pipelines.blocks.calibration.config import (
     PostProcessingGEHConfig,
     USDOTCalibrationConfig,
 )
+from sumo_pipelines.utils.config_helpers import config_wrapper
 
 # if Type:
 #     import polars as pl
@@ -14,6 +15,7 @@ from sumo_pipelines.blocks.calibration.config import (
 #     pass
 
 
+@config_wrapper
 def calculate_geh(config: PostProcessingGEHConfig, *args, **kwargs):
     # Load the data
     rw_count_df = pl.read_parquet(config.rw_count_file)
@@ -90,7 +92,6 @@ def calculate_geh(config: PostProcessingGEHConfig, *args, **kwargs):
     # Save combined dataframe if save_path is declared
     if config.output_file:
         combined_df.write_parquet(config.output_file)
-
 
 
 def _open_detector_df(file_path: str, target_col: str):
@@ -177,6 +178,7 @@ def usdot_table_join(
     return calibrate_df
 
 
+@config_wrapper
 def usdot_calibrate(config: USDOTCalibrationConfig, *args, **kwargs) -> None:
     calibrate_df = usdot_table_join(config)
 

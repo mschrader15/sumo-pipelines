@@ -135,15 +135,15 @@ class CMakeBuild(build_ext):
 def setup_package():
     ext_modules = []
     cmdclass = {}
-    
+
     # Only add C++ extension if explicitly requested
-    if os.environ.get('BUILD_CPP', '').lower() in ('1', 'true', 'yes', 'on'):
+    if os.environ.get("BUILD_CPP", "").lower() in ("1", "true", "yes", "on"):
         ext_modules = [CMakeExtension("_sumo_pipelines")]
         cmdclass = {"build_ext": CMakeBuild}
 
     setup(
         name="sumo-pipelines",
-        version="1.1.6",
+        version="1.1.7",
         author="Max Schrader",
         author_email="mschrader15@gmail.com",
         packages=find_packages(),
@@ -152,8 +152,9 @@ def setup_package():
         cmdclass=cmdclass,
         zip_safe=False,
         extras_require={"test": ["pytest>=6.0"]},
-        package_data={'sumo_pipelines': ['*.yaml']}
+        package_data={"sumo_pipelines": ["*.yaml"]},
     )
+
 
 if __name__ == "__main__":
     setup_package()

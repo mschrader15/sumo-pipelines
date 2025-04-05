@@ -3,8 +3,10 @@ from ray.util.queue import Queue
 
 from sumo_pipelines.blocks.nested.config import NestedQueueFunction
 from sumo_pipelines.config import PipelineConfig
+from sumo_pipelines.utils.config_helpers import config_wrapper
 
 
+@config_wrapper
 def nested_queue_consumer(
     config: NestedQueueFunction,
     pipeline_config: PipelineConfig,

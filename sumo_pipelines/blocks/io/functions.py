@@ -4,9 +4,12 @@ from pathlib import Path
 from omegaconf import OmegaConf
 from ray.util.queue import Queue
 
+from sumo_pipelines.utils.config_helpers import config_wrapper
+
 from .config import DuckDBConfig, RemoveFileConfig, SaveConfig
 
 
+@config_wrapper
 def save_config(config: SaveConfig, parent_config: OmegaConf) -> None:
     """
     This function saves the config file to a json file.
@@ -33,6 +36,7 @@ def save_config(config: SaveConfig, parent_config: OmegaConf) -> None:
         f.write(OmegaConf.to_yaml(OmegaConf.create(d), resolve=False))
 
 
+@config_wrapper
 def mv_file(config: SaveConfig, parent_config: OmegaConf) -> None:
     """
     This function moves a list of target files to their proper destination
@@ -45,6 +49,7 @@ def mv_file(config: SaveConfig, parent_config: OmegaConf) -> None:
         Path(f.source).rename(f.target)
 
 
+@config_wrapper
 def rm_file(config: RemoveFileConfig, parent_config: OmegaConf) -> None:
     """
     This function removes a list of target files
@@ -68,6 +73,7 @@ def rm_file(config: RemoveFileConfig, parent_config: OmegaConf) -> None:
                 print(f"Error removing file: {f}")
 
 
+@config_wrapper
 def build_duckdb_database(config: DuckDBConfig, *args, **kwargs) -> None:
     import duckdb as db
 
@@ -84,6 +90,7 @@ def build_duckdb_database(config: DuckDBConfig, *args, **kwargs) -> None:
             )
 
 
+@config_wrapper
 def dump_duckdb_database(config: DuckDBConfig, *args, **kwargs) -> None:
     import duckdb as db
 
@@ -97,6 +104,7 @@ def dump_duckdb_database(config: DuckDBConfig, *args, **kwargs) -> None:
         )
 
 
+@config_wrapper
 def persistent_db_writer(config: DuckDBConfig, queue: Queue, *args, **kwargs) -> None:
     import duckdb as db
 

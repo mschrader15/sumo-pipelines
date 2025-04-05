@@ -15,10 +15,13 @@ from typing import Generator
 
 from omegaconf import DictConfig, OmegaConf
 
+from sumo_pipelines.utils.config_helpers import config_wrapper
+
 # from config import PipelineConfig
 from .config import IteratorConfig, ReadConfig, SeedConfig, SobolSequenceConfig
 
 
+@config_wrapper
 def read_configs(
     config: ReadConfig,
     parent_config: DictConfig,
@@ -45,6 +48,7 @@ def read_configs(
             yield OmegaConf.load(f)
 
 
+@config_wrapper
 def generate_random_seed(
     config: SeedConfig,
     parent_config: DictConfig,
@@ -61,6 +65,7 @@ def generate_random_seed(
         yield new_conf
 
 
+@config_wrapper
 def generate_iterator(
     config: IteratorConfig,
     parent_config: DictConfig,
@@ -75,6 +80,7 @@ def generate_iterator(
         yield new_conf
 
 
+@config_wrapper
 def generate_sobol_sequence(
     config: SobolSequenceConfig,
     parent_config: DictConfig,

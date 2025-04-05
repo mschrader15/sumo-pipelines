@@ -6,6 +6,8 @@ from contextlib import closing, redirect_stdout
 import sumolib
 from omegaconf import DictConfig
 
+from sumo_pipelines.utils.config_helpers import config_wrapper
+
 from .config import SimulationConfig
 
 
@@ -50,6 +52,7 @@ def make_cmd(
     )
 
 
+@config_wrapper
 def run_sumo(
     config: SimulationConfig, parent_config: DictConfig, *args, **kwargs
 ) -> None:
@@ -76,6 +79,7 @@ def run_sumo(
         raise RuntimeError("Sumo failed to run")
 
 
+@config_wrapper
 def run_sumo_fast_fcd(
     config: SimulationConfig, parent_config: DictConfig, *args, **kwargs
 ) -> None:
@@ -145,6 +149,7 @@ def run_sumo_fast_fcd(
         func()
 
 
+@config_wrapper
 def run_sumo_socket_listeners(
     config: SimulationConfig, parent_config: DictConfig, *args, **kwargs
 ) -> None:
@@ -183,6 +188,7 @@ def run_sumo_socket_listeners(
     print(r)
 
 
+@config_wrapper
 def run_sumo_function(
     config: SimulationConfig, parent_config: DictConfig, *args, **kwargs
 ) -> None:

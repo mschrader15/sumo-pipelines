@@ -1,9 +1,9 @@
 import random
+import re
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, List, Union
-import re
+from typing import TYPE_CHECKING, Any, Callable, List, TypeVar, Union, get_type_hints
 
 from omegaconf import DictConfig, ListConfig, OmegaConf
 from simpleeval import simple_eval
@@ -21,6 +21,58 @@ try:  # pragma: no cover
 
 except ImportError:
     from sumo_pipelines._config_stubs import OptimizationConfig, PipelineConfig
+
+
+# Type variable for the config class
+ConfigT = TypeVar("ConfigT")
+
+
+def config_wrapper(func: Callable[..., Any]) -> Callable[..., Any]:
+    """
+    A decorator that accepts an OmegaConf config and converts it to the expected config type
+    for the decorated function at execution time.
+    """
+
+    def wrapper(omega_config: Any, *args, **kwargs) -> Any:
+        # Get the type hints from the decorated function
+        type_hints = get_type_hints(func)
+
+        # Find the config parameter type (assuming it's the first parameter)
+        config_param_name = next(
+            (
+                param
+                for param, param_type in type_hints.items()
+                if param != "return" and not param.startswith("_")
+            ),
+            None,
+        )
+
+        if config_param_name is None:
+            raise ValueError("No config parameter found in function signature")
+
+        # Get the expected config type
+        expected_config_type = type_hints[config_param_name]
+
+        # Convert OmegaConf config to the expected type
+        try:
+            structured_config = OmegaConf.structured(expected_config_type)
+            converted_config = OmegaConf.merge(structured_config, omega_config)
+        except Exception as e:
+            raise ValueError(
+                f"Failed to convert config: {e} of type {type(omega_config)} for function {func.__name__}"
+            ) from e
+        # set the parent of the converted config to the original config to allow for variable interpolation
+        converted_config._set_parent(omega_config._parent)
+
+        # Call the original function with the converted config
+        r = func(converted_config, *args, **kwargs)
+
+        # merge the original config with the converted config to keep the outputs
+        _ = OmegaConf.unsafe_merge(omega_config, converted_config)
+
+        return r
+
+    return wrapper
 
 
 def update_parent_from_yaml(p, *, _parent_: DictConfig):
@@ -233,12 +285,12 @@ def open_config_structured(
                     # check if a [<int>] is in the path using regex
                     p = str(p)
                     if re.findall(r"\[-?\d+\]", p):
-                        update_dotpaths.append(('dot', tuple(p.split("="))))
+                        update_dotpaths.append(("dot", tuple(p.split("="))))
 
                     else:
-                        update_dotpaths.append(('conf', OmegaConf.from_cli([p])))
-                except Exception:
-                    raise Exception(f"Failed to load: {p}")
+                        update_dotpaths.append(("conf", OmegaConf.from_cli([p])))
+                except Exception as e:
+                    raise Exception(f"Failed to load: {p}") from e
 
         # all_confs = [OmegaConf.load(p) for p in path]
         # special merge behavior for Blocks.SimulationConfig.addiational_files & Blocks.SimulationConfig.additional_sim_params
