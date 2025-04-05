@@ -7,13 +7,10 @@ import numpy as np
 import polars as pl
 from omegaconf import DictConfig, OmegaConf
 
+from sumo_pipelines.utils.config_helpers import config_wrapper
 from sumo_pipelines.utils.emissions_helpers import calc_normalized_fc
 from sumo_pipelines.utils.geo_helpers import get_polygon, is_inside_sm_parallel
 
-# from sumo_pipelines.utils.geo_helpers import is_inside_sm_parallel
-# from sumo_pipelines.sumo_pipelines_rs import (
-#     is_inside_sm_parallel_py as is_inside_sm_parallel,
-# )
 from .config import (
     EmissionsTableFuelTotalConfig,
     FuelTotalConfig,
@@ -101,6 +98,7 @@ def save_to_file(config, fc_t, cars_total):
         f.write(f"{fc_t!s},{cars_total}")
 
 
+@config_wrapper
 def fast_total_energy(
     config: FuelTotalConfig,
     *args,
@@ -143,6 +141,7 @@ def fast_total_energy(
     delete_xml(config)
 
 
+@config_wrapper
 def fast_timestep_energy(
     config: FuelTotalConfig,
     *args,
@@ -192,6 +191,7 @@ def fast_timestep_energy(
     #         f.write(",".join((str(time), str(fuel))) + "\n")
 
 
+@config_wrapper
 def fast_tripinfo_fuel(config: TripInfoTotalFuelConfig, *args, **kwargs) -> None:
     time_high_filter = config.time_high_filter
     time_low_filter = config.time_low_filter
@@ -290,6 +290,7 @@ def emissions_table_to_total_no_conf(
     )
 
 
+@config_wrapper
 def emissions_table_to_total(
     config: EmissionsTableFuelTotalConfig,
     _config: DictConfig,

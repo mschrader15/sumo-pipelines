@@ -1,7 +1,9 @@
 from dataclasses import MISSING, dataclass, field
 from typing import Any, Dict, List
 
-from sumo_pipelines.config import Blocks, MetaData, Pipeline
+from omegaconf import DictConfig
+
+from sumo_pipelines.config import MetaData, Pipeline
 
 
 @dataclass
@@ -72,5 +74,5 @@ class CalibrationConfig:
 class OptimizationConfig:
     Metadata: MetaData
     Pipeline: Pipeline
-    Blocks: Blocks
+    Blocks: DictConfig
     Optimization: CalibrationConfig

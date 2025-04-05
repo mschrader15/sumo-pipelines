@@ -8,6 +8,8 @@ import pyarrow.parquet as pq
 import sumolib
 from omegaconf import DictConfig
 
+from sumo_pipelines.utils.config_helpers import config_wrapper
+
 # from sumo_pipelines.sumo_pipelines_rs import parse_emissions_xml
 from .config import (
     XMLChangeOutputConfig,
@@ -16,6 +18,7 @@ from .config import (
 )
 
 
+@config_wrapper
 def update_output_file(config: XMLChangeOutputConfig, *args, **kwargs) -> None:
     """
     This function takes an xml file that has an output path (like SUMO's detector files),
@@ -35,6 +38,7 @@ def update_output_file(config: XMLChangeOutputConfig, *args, **kwargs) -> None:
             file.write(filedata)
 
 
+@config_wrapper
 def simple_regex_update(config: XMLSimpleRegexConfig, *args, **kwargs) -> None:
     with open(config.source) as file:
         filedata = file.read()
@@ -88,6 +92,7 @@ def _build_decomposer(elements: List[dict], element_dict) -> callable:
     return decompose
 
 
+@config_wrapper
 def convert_xml_to_parquet(config: XMLConvertConfig, parent_config: DictConfig) -> None:
     """
     This function converts a sumo xml file to a parquet file using pyarrow.
@@ -116,6 +121,7 @@ def convert_xml_to_parquet(config: XMLConvertConfig, parent_config: DictConfig) 
         Path(config.source).unlink()
 
 
+@config_wrapper
 def convert_xml_to_parquet_pandas(config: XMLConvertConfig, *args, **kwargs) -> None:
     import pandas as pd
 

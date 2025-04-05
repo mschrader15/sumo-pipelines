@@ -1,10 +1,12 @@
 from omegaconf import DictConfig
 
+from sumo_pipelines.utils.config_helpers import config_wrapper
 from sumo_pipelines.utils.nema_utils import NEMALight
 
 from .config import NEMAUpdateConfig
 
 
+@config_wrapper
 def update_nema(
     nema_config: NEMAUpdateConfig,
     parent_config: DictConfig,

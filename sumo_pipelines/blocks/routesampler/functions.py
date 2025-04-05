@@ -5,11 +5,13 @@ import numpy as np
 import polars as pl
 from omegaconf import DictConfig
 
+from sumo_pipelines.utils.config_helpers import config_wrapper
 from sumo_pipelines.utils.file_helpers import import_sumo_tools_module
 
 from .config import RandomTripsConfig, RouteSamplerConfig, TurnFileConfig
 
 
+@config_wrapper
 def write_turn_file_input(
     turn_file_config: TurnFileConfig,
     *args,
@@ -123,6 +125,7 @@ def write_turn_file_input(
         f_.write("""</additional>\n""")
 
 
+@config_wrapper
 def call_route_sampler(
     route_sampler_config: RouteSamplerConfig,
     config: DictConfig,
@@ -146,6 +149,7 @@ def call_route_sampler(
     )
 
 
+@config_wrapper
 def call_random_trips(
     config: RandomTripsConfig,
     *args,

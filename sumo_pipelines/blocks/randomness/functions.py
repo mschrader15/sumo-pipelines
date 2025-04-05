@@ -2,9 +2,12 @@ import random
 
 import numpy as np
 
+from sumo_pipelines.utils.config_helpers import config_wrapper
+
 from .config import RandomSeedConfig
 
 
+@config_wrapper
 def set_random_seed(
     config: RandomSeedConfig,
     _global_config: dict,

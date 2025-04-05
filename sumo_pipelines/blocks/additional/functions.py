@@ -1,5 +1,7 @@
 import polars as pl
 
+from sumo_pipelines.utils.config_helpers import config_wrapper
+
 from .config import WayPointConfig
 
 # TODO: Implement the following function
@@ -13,6 +15,7 @@ from .config import WayPointConfig
 #         <vehicle id="follower" depart="0" departPos="">
 
 
+@config_wrapper
 def generate_waypointed_route(
     config: WayPointConfig,
     *args,

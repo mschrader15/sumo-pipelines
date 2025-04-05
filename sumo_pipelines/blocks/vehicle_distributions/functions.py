@@ -6,6 +6,8 @@ import polars as pl
 import scipy.stats as stats
 from omegaconf import DictConfig
 
+from sumo_pipelines.utils.config_helpers import config_wrapper
+
 from .config import (
     CFAddParamsConfig,
     CFTableConfig,
@@ -53,6 +55,7 @@ def _create_distribution_table(
         f.write("</vTypeDistribution>")
 
 
+@config_wrapper
 def create_distribution_table(
     cf_config: CFTableConfig,
     config: DictConfig,
@@ -83,6 +86,7 @@ def create_distribution_table(
     )
 
 
+@config_wrapper
 def create_independent_distribution_pandas(
     cf_config: CFTableConfig,
     config: DictConfig,
@@ -128,6 +132,7 @@ def create_independent_distribution_pandas(
         f.write("</vTypeDistribution>")
 
 
+@config_wrapper
 def create_simple_distribution(
     cf_config: SimpleCFConfig,
     config: DictConfig,
@@ -162,6 +167,7 @@ def _parse_num_samples(num_samples: str) -> int:
         return int(matches[0]) - int(matches[1])
 
 
+@config_wrapper
 def create_simple_sampled_distribution(
     cf_config: SampledSimpleCFConfig, config: DictConfig
 ):
@@ -223,6 +229,7 @@ def _sample_dist(param: ParamConfig, n: int, seed: int = 42) -> np.array:
     return vals
 
 
+@config_wrapper
 def create_simple_sampled_distribution_scipy(
     cf_config: SampledSimpleCFConfig, *args, **kwargs
 ) -> None:
@@ -263,6 +270,7 @@ def create_simple_sampled_distribution_scipy(
     )
 
 
+@config_wrapper
 def create_multi_type_distribution(
     cf_config: MultiTypeCFConfig,
     *args,
@@ -296,6 +304,7 @@ def create_multi_type_distribution(
     )
 
 
+@config_wrapper
 def merge_veh_distributions(
     config: MergeVehDistributionsConfig,
     *args,
@@ -359,6 +368,7 @@ def _custom_to_xml(
     tree.write(file_path, pretty_print=True, xml_declaration=True, encoding="utf-8")
 
 
+@config_wrapper
 def update_veh_distribution(
     cf_config: CFAddParamsConfig,
     config: DictConfig,
