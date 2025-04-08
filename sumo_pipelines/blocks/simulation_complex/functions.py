@@ -94,10 +94,15 @@ class PhaseHolder:
         )
 
     def update(self, e3_subs, veh_subs, sim_time):
-        ids = set(
-            (_id, ("t" in veh_subs[_id][tc.VAR_VEHICLECLASS]))
-            for _id in e3_subs[self._e3][tc.LAST_STEP_VEHICLE_ID_LIST]
-        )
+        ids = set()
+        for _id in e3_subs[self._e3][tc.LAST_STEP_VEHICLE_ID_LIST]:
+            if _id in veh_subs:
+                ids.add((_id, ("t" in veh_subs[_id][tc.VAR_VEHICLECLASS])))
+            else:
+                print(
+                    f"Vehicle {_id} not found in vehicle subscriptions. This should not happen."
+                )
+
         add_ids = ids.difference(self._ids)
         remove_ids = self._ids.difference(ids)
 
