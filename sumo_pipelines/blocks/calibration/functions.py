@@ -133,7 +133,7 @@ def usdot_table_join(
     if isinstance(config.start_time, str):
         start_time = datetime.strptime(
             config.start_time,
-            "%Y-%m-%d %H:%M:%S%z",
+            "%Y-%m-%d %H:%M:%S",
         ).replace(tzinfo=timezone("US/Central"))
     else:
         start_time = config.start_time.replace(tzinfo=timezone("US/Central"))

@@ -54,7 +54,7 @@ def write_turn_file_input(
             # probabilisticall round to an integer
             pl.col("volume")
             .fill_null(0)
-            .map(
+            .map_batches(
                 lambda x: np.floor(x.to_numpy())
                 + 1
                 * (
@@ -118,7 +118,7 @@ def write_turn_file_input(
     with open(turn_file_config.output_file, "w") as f_:
         f_.write("""<additional>\n""")
 
-        df.group_by("begin", "end", maintain_order=True).apply(
+        df.group_by("begin", "end", maintain_order=True).map_groups(
             lambda _df: write_lines(_df, f_)
         )
 
